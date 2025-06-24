@@ -52,9 +52,9 @@ When a valid reply message is detected, the following sequence of actions will b
 
     - **Attribution:** The message will be formatted to clearly indicate the original author. A common practice is using a webhook or an embed to post the message under the original user's name and avatar. For v1.0, a simple text-based attribution is sufficient:
 
-      > **Reply from @\[Original Author\]:**
+      > **Reply from @[Original Author]:**
       >
-      > \[Original message content\]
+      > [Original message content]
 
     - **Attachments & Embeds:** Any files or embeds from the user's original reply will be included in the message posted by the bot.
 
@@ -78,11 +78,11 @@ When a valid reply message is detected, the following sequence of actions will b
 
 ## 3\. Technical Specification
 
-- **Runtime Environment:** Deno
+- **Language:** Python
 
-- **Language:** TypeScript
+- **Primary Library:** discord.py
 
-- **Primary Library:** [discordeno](https://discordeno.mod.land/ "null") - A modern, lightweight, and Deno-first Discord API wrapper.
+- **Documentation:** [discord.py documentation](https://context7.com/rapptz/discord.py/llms.txt)
 
 ## 4\. Discord Bot Configuration
 
@@ -90,59 +90,28 @@ When a valid reply message is detected, the following sequence of actions will b
 
 The bot will require the following permissions to be granted during the OAuth2 URL generation:
 
-**Permission**
-
-**Reason**
-
-**View Channels**
-
-To see messages in channels.
-
-**Send Messages**
-
-To send the reply content into the new thread.
-
-**Send Messages in Threads**
-
-To send the reply content into the new thread.
-
-**Create Public Threads**
-
-The core functionality of the bot.
-
-**Manage Messages**
-
-To delete the original user reply and the system message.
-
-**Read Message History**
-
-To fetch the content of the message being replied to, if needed.
+| Permission                   | Reason                                                           |
+| ---------------------------- | ---------------------------------------------------------------- |
+| **View Channels**            | To see messages in channels.                                     |
+| **Send Messages**            | To send the reply content into the new thread.                   |
+| **Send Messages in Threads** | To send the reply content into the new thread.                   |
+| **Create Public Threads**    | The core functionality of the bot.                               |
+| **Manage Messages**          | To delete the original user reply and the system message.        |
+| **Read Message History**     | To fetch the content of the message being replied to, if needed. |
 
 ### 4.2. Gateway Intents
 
 The bot will require the following Gateway Intents to be enabled in the Discord Developer Portal:
 
-**Intent**
-
-**Reason**
-
-`GUILDS`
-
-Standard intent for server-related events.
-
-`GUILD_MESSAGES`
-
-To receive message creation events.
-
-`MESSAGE_CONTENT`
-
-**(Privileged Intent)** Required to read the content of messages. This must be explicitly enabled in the bot's settings on the Discord Developer Portal.
+| Intent            | Reason                                                                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GUILDS`          | Standard intent for server-related events.                                                                                                               |
+| `GUILD_MESSAGES`  | To receive message creation events.                                                                                                                      |
+| `MESSAGE_CONTENT` | **(Privileged Intent)** Required to read the content of messages. This must be explicitly enabled in the bot's settings on the Discord Developer Portal. |
 
 ## 5\. Error Handling & Edge Cases
 
 - **Missing Permissions:** If the bot fails to delete a message or create a thread, it should log the error with the server ID and channel ID. It should not crash. The operation for that specific reply will be aborted.
-
-- **Rate Limiting:** The `discordeno` library handles rate limits by default. No special implementation is needed for v1.0, but the bot's logs should be monitored for any rate-limiting issues.
 
 - **API Errors:** All interactions with the Discord API (deleting messages, creating threads, sending messages) will be wrapped in `try/catch` blocks.
 
@@ -160,22 +129,4 @@ To receive message creation events.
 
 4.  **Invite Bot:** Generate an OAuth2 URL with the permissions outlined in section 4.1 and invite the bot to the desired server(s).
 
-5.  **Run the Bot:** The bot will be run using the Deno CLI:
-
-    ```
-    deno run --allow-net --allow-env main.ts
-    ```
-
-    (Flags may vary slightly based on the final code structure).
-
-## 7\. Future Enhancements (Post v1.0)
-
-- **Configuration Commands:** Allow server admins to disable the bot for specific channels or categories.
-
-- **Role-based Bypass:** Allow users with a specific role (e.g., "Moderator") to reply normally without triggering the bot.
-
-- **Thread Name Customization:** Allow admins to set a template for how thread names are generated (e.g., using placeholders for author names, original message content, etc.).
-
-- **Customizable Messages:** Allow customization of the message format posted in the thread.
-
-- **Private Threads:** Add an option to create private threads instead of public ones, perhaps triggered by a specific emoji reaction.
+5.  **Run the Bot.**
