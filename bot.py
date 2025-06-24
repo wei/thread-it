@@ -154,8 +154,11 @@ class ThreadItBot(discord.Client):
                 await self.log_operation_metrics("gather_reply_info", False, error="Failed to gather info")
                 return
 
-            # Create thread and repost content
-            thread = await self.create_thread_from_reply(reply_info)
+            # Create or retrieve thread and repost content
+            if reply_info['parent_message'].thread is not None:
+                thread = reply_info['parent_message'].thread
+            else:
+                thread = await self.create_thread_from_reply(reply_info)
 
             if thread is None:
                 self.logger.warning(f"Failed to create thread for reply {reply_info['message_id']}")
