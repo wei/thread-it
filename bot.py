@@ -313,8 +313,20 @@ class ThreadItBot(discord.Client):
             author = reply_info['author']
             content = reply_info['content']
 
-            # Create the attributed message content
-            attributed_content = f"_Reply from {author.mention}:_\n\n{content}" if content else f"_Reply from {author.mention}_"
+            # Create a Discord embed for better visual attribution
+            embed = discord.Embed(
+                description=content if content else "",
+                color=0x5865F2  # Discord's blurple color
+            )
+
+            # Set author information with avatar
+            embed.set_author(
+                name=author.display_name,
+                icon_url=author.display_avatar.url
+            )
+
+            # Add timestamp
+            embed.timestamp = reply_info['created_at']
 
             # Prepare files for attachments
             files = []
@@ -332,18 +344,32 @@ class ThreadItBot(discord.Client):
                     except Exception as e:
                         self.logger.warning(f"Failed to process attachment {attachment.filename}: {e}")
 
-            # Send the message with content, embeds, and files
+            # Combine the new embed with any existing embeds from the original message
+            all_embeds = [embed] + reply_info['embeds']
+
+            # Send the message with embed, existing embeds, and files
             await thread.send(
-                content=attributed_content,
-                embeds=reply_info['embeds'],
+                embeds=all_embeds,
                 files=files if files else None
             )
 
+            # Add the original message author as a participant to the thread
+            try:
+                await thread.add_user(author)
+                self.logger.debug(f"Added {author.display_name} as participant to thread {thread.id}")
+            except discord.Forbidden:
+                self.logger.warning(f"Missing permissions to add {author.display_name} to thread {thread.id}")
+            except discord.HTTPException as e:
+                self.logger.warning(f"HTTP error adding {author.display_name} to thread {thread.id}: {e}")
+            except Exception as e:
+                self.logger.warning(f"Unexpected error adding {author.display_name} to thread {thread.id}: {e}")
+
             self.logger.debug(
-                f"Reposted reply content in thread {thread.id}: "
+                f"Reposted reply content in thread {thread.id} with embed attribution: "
                 f"content_length={len(content)}, "
                 f"attachments={len(reply_info['attachments'])}, "
-                f"embeds={len(reply_info['embeds'])}"
+                f"original_embeds={len(reply_info['embeds'])}, "
+                f"total_embeds={len(all_embeds)}"
             )
 
             return True

@@ -114,9 +114,9 @@ Before submitting a pull request, manually test your changes with a test Discord
 server:
 
 1. Ensure the bot runs without errors using `python bot.py`.
-2. Verify that replies are converted to threads and that attachments and embeds
-   are preserved.
-3. Check the console output for warnings or exceptions.
+2. Verify that replies are converted to threads with proper embed attribution showing the author's avatar and display name.
+3. Confirm that attachments and embeds are preserved, and that the original reply author is added as a thread participant.
+4. Check the console output for warnings or exceptions.
 
 ## 📤 Submitting Changes
 
@@ -170,7 +170,7 @@ The main bot class that handles Discord events and thread creation.
 - `on_message(message)`: Main event handler for processing message replies
 - `process_reply_to_thread(message)`: Orchestrates the reply-to-thread conversion
 - `create_thread_from_reply(reply_info)`: Creates a new thread from reply information
-- `repost_reply_in_thread(thread, reply_info)`: Reposts reply content in the created thread
+- `repost_reply_in_thread(thread, reply_info)`: Reposts reply content in the created thread using Discord embeds for rich attribution and adds the author as a thread participant
 - `cleanup_messages(reply_info)`: Handles message cleanup and user notifications
 - `delete_original_reply(reply_info)`: Deletes the original reply message
 - `send_temporary_notification(reply_info)`: Sends auto-deleting notification to guide users

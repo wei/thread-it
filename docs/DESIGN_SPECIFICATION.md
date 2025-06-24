@@ -54,10 +54,11 @@ When a valid reply message is detected, the following sequence of actions is exe
 
 4.  **Re-post the Reply in the Thread:** The bot posts the content of the reply into the newly created thread:
 
-    - **Attribution:** Uses italic formatting: `_Reply from @[Original Author]:_`
-    - **Content Preservation:** Maintains all original text content
+    - **Attribution:** Uses a Discord embed with the author's avatar, display name, and timestamp for rich visual attribution
+    - **Content Preservation:** Maintains all original text content within the embed description
     - **Attachments:** Downloads and re-uploads all file attachments
-    - **Embeds:** Preserves all embed content from the original reply
+    - **Embeds:** Preserves all embed content from the original reply alongside the new attribution embed
+    - **Thread Participation:** Automatically adds the original reply author as a participant in the thread
 
 5.  **Clean Up Messages:** The bot performs cleanup operations:
     - **Delete Original Reply:** Removes the user's original reply message from the main channel
