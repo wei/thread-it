@@ -6,12 +6,17 @@
 
 A Discord bot that automatically keeps channels clean by converting message replies into organized public threads. Thread It promotes organized conversations by seamlessly moving reply discussions into dedicated threads, preventing channel clutter while maintaining context.
 
+<details>
+<summary>🎦 Video Demo</summary>
+
+https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
+</details>
+
 ## 📋 Table of Contents
 
 - [Features](#-features)
 - [How It Works](#-how-it-works)
 - [Installation](#-installation)
-- [Configuration](#-configuration)
 - [Usage](#-usage)
 - [Required Permissions](#-required-permissions)
 - [Support & Documentation](#-support--documentation)
@@ -107,35 +112,6 @@ cp .env.example .env
 ```bash
 python bot.py
 ```
-
-## ⚙️ Configuration
-
-Thread It uses environment variables for configuration. Create a `.env` file in the project root:
-
-```env
-# Required: Your Discord bot token
-DISCORD_TOKEN=your_bot_token_here
-
-# Optional: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-LOG_LEVEL=INFO
-```
-
-### Configuration Options
-
-| Variable        | Required | Default | Description             |
-| --------------- | -------- | ------- | ----------------------- |
-| `DISCORD_TOKEN` | ✅       | None    | Your Discord bot token  |
-| `LOG_LEVEL`     | ❌       | INFO    | Logging verbosity level |
-
-### Thread Settings
-
-The bot includes several configurable settings in `config.py`:
-
-- **Auto-archive Duration**: Threads auto-archive after 24 hours (1440 minutes)
-- **Thread Name Length**: Maximum 100 characters (Discord limit)
-- **Thread Naming**: Automatically generated from original message content
-
-> **Note**: Based on previous discussions, rate limiting and file logging parameters have been simplified. The bot now uses streamlined logging without complex file rotation or rate limiting configurations.
 
 ## 📖 Usage
 
