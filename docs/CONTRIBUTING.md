@@ -108,6 +108,16 @@ async def create_thread_from_reply(self, reply_info: Dict[str, Any]) -> Optional
 - Document all parameters and return values
 - Explain the purpose and behavior of functions
 
+## 🧪 Testing Requirements
+
+Before submitting a pull request, manually test your changes with a test Discord
+server:
+
+1. Ensure the bot runs without errors using `python bot.py`.
+2. Verify that replies are converted to threads and that attachments and embeds
+   are preserved.
+3. Check the console output for warnings or exceptions.
+
 ## 📤 Submitting Changes
 
 ### Commit Guidelines
@@ -137,6 +147,15 @@ async def create_thread_from_reply(self, reply_info: Dict[str, Any]) -> Optional
    - **Reference any related issues** using `#issue-number`
    - **Screenshots** if UI/behavior changes are involved
    - **Testing notes** describing how you tested the changes
+
+## 🚨 Reporting Issues
+
+If you encounter bugs or have feature requests, please open an issue on GitHub.
+Include the following details when reporting a problem:
+
+- Steps to reproduce the issue
+- What you expected to happen
+- What actually happened (include console output if possible)
 
 ## 📚 API Documentation
 
@@ -190,7 +209,7 @@ graph TD
     I --> J{Deletion Successful?}
     J -->|Yes| K[Send Notification]
     J -->|No| L[Skip Notification]
-    K --> M[Auto-delete Notification after 5s]
+    K --> M[Auto-delete Notification after 8s]
     L --> N[Success]
     M --> N
 ```

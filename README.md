@@ -176,7 +176,7 @@ If you're experiencing permission-related problems, see our [Troubleshooting Gui
 
 - **🐛 Issues**: [Report bugs or request features](https://github.com/wei/thread-it/issues)
 - **🔧 Troubleshooting**: [Common issues and solutions](docs/TROUBLESHOOTING.md)
-- **📖 Design Docs**: [Technical specification](docs/design-specification.md)
+- **📖 Design Docs**: [Technical specification](docs/DESIGN_SPECIFICATION.md)
 - **📚 Discord.py**: [Official discord.py documentation](https://discordpy.readthedocs.io/)
 
 ### Quick Links

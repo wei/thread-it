@@ -161,7 +161,7 @@ The bot implements robust error handling throughout all operations:
 
 - **Missing Permissions:** Bot validates permissions and logs detailed error messages with server/channel context
 - **Parent Message Not Found:** Handles cases where the replied-to message has been deleted
-- **Rate Limiting:** Implements rate limit handling with exponential backoff
+- **Rate Limiting:** Implements rate limit handling with a simple backoff (defaults to a 5 second wait)
 - **Attachment Processing:** Gracefully handles attachment download/upload failures
 - **Thread Creation Failures:** Handles Discord API errors during thread creation
 - **Message Deletion Failures:** Continues operation even if cleanup fails
