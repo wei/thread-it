@@ -61,6 +61,7 @@ When a valid reply message is detected, the following sequence of actions is exe
 
 5.  **Clean Up Messages:** The bot performs cleanup operations:
     - **Delete Original Reply:** Removes the user's original reply message from the main channel
+    - **Send Temporary Notification:** Sends a brief message directing the user to continue in the thread, which auto-deletes after 8 seconds
     - **Delete System Messages:** Automatically detects and removes Discord's system thread creation messages
 
 ### 2.3. Desired User Experience Flow

@@ -169,7 +169,7 @@ class ThreadItBot(discord.Client):
                 return
 
             # Clean up messages as specified in design document
-            await self.cleanup_messages(reply_info)
+            await self.cleanup_messages(thread, reply_info)
 
             # Log successful completion with metrics
             duration = asyncio.get_event_loop().time() - start_time
@@ -355,10 +355,14 @@ class ThreadItBot(discord.Client):
             self.logger.exception(f"Unexpected error reposting in thread {thread.id}: {e}")
             return False
 
-    async def cleanup_messages(self, reply_info):
+    async def cleanup_messages(self, thread, reply_info):
         """
         Clean up messages as specified in the design document:
         1. Delete the original reply message
+        2. Send a temporary notification to guide the user to the thread
+
+        The notification message mentions the user and directs them to continue
+        their conversation in the thread, then automatically deletes after 8 seconds.
 
         Note: System thread creation messages are handled automatically
         in the on_message event handler for better reliability.
@@ -367,7 +371,11 @@ class ThreadItBot(discord.Client):
             reply_info: Dictionary containing reply information
         """
         # Delete the original reply message
-        await self.delete_original_reply(reply_info)
+        deletion_successful = await self.delete_original_reply(reply_info)
+
+        # Send temporary notification only if deletion was successful
+        if deletion_successful:
+            await self.send_temporary_notification(thread, reply_info)
 
     async def delete_original_reply(self, reply_info):
         """
@@ -375,6 +383,9 @@ class ThreadItBot(discord.Client):
 
         Args:
             reply_info: Dictionary containing reply information
+
+        Returns:
+            bool: True if deletion was successful, False otherwise
         """
         try:
             # Get the original message from the channel
@@ -386,19 +397,61 @@ class ThreadItBot(discord.Client):
             await original_message.delete()
 
             self.logger.debug(f"Deleted original reply message {message_id} from #{channel.name}")
+            return True
 
         except discord.NotFound:
             # Message was already deleted or doesn't exist
             self.logger.debug(f"Original reply message {reply_info['message_id']} not found (already deleted?)")
+            return False
         except discord.Forbidden:
             self.logger.warning(
                 f"Missing permissions to delete original reply message {reply_info['message_id']} "
                 f"in #{reply_info['channel'].name}"
             )
+            return False
         except discord.HTTPException as e:
             self.logger.error(f"HTTP error deleting original reply message {reply_info['message_id']}: {e}")
+            return False
         except Exception as e:
             self.logger.exception(f"Unexpected error deleting original reply message {reply_info['message_id']}: {e}")
+            return False
+
+    async def send_temporary_notification(self, thread, reply_info):
+        """
+        Send a temporary notification message directing the user to continue in the thread.
+        The notification automatically deletes after 8 seconds.
+
+        Args:
+            reply_info: Dictionary containing reply information
+        """
+        try:
+            channel = reply_info['channel']
+            user = reply_info['author']
+
+            notification_content = f"{user.mention}, please continue your conversation in {thread.mention}."
+
+            # Send the notification message
+            notification_message = await channel.send(notification_content)
+
+            self.logger.debug(
+                f"Sent temporary notification to {user} in #{channel.name}, "
+                f"message will auto-delete in 8 seconds"
+            )
+
+            # Schedule automatic deletion after 8 seconds
+            await asyncio.sleep(8)
+            await notification_message.delete()
+
+            self.logger.debug(f"Auto-deleted notification message {notification_message.id} in #{channel.name}")
+
+        except discord.Forbidden:
+            self.logger.warning(
+                f"Missing permissions to send notification message in #{reply_info['channel'].name}"
+            )
+        except discord.HTTPException as e:
+            self.logger.error(f"HTTP error sending notification message: {e}")
+        except Exception as e:
+            self.logger.exception(f"Unexpected error sending temporary notification: {e}")
 
     async def delete_system_thread_message(self, message):
         """

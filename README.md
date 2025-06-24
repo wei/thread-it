@@ -166,6 +166,7 @@ Main Channel:
 - **Only processes replies**: Regular messages are left untouched
 - **Skips existing threads**: Won't create threads within threads
 - **Validates permissions**: Checks required permissions before acting
+- **Sends helpful notifications**: Briefly notifies users where to continue their conversation (auto-deletes after 8 seconds)
 - **Handles errors gracefully**: Logs issues without crashing
 
 ## 🔐 Required Permissions

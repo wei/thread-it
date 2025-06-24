@@ -161,6 +161,38 @@ Thread creation failed: Missing Access
 2. **Verify Bot Application**: Ensure your bot is verified if needed
    - Large bots may need verification to access message content
 
+### Notification Messages Not Appearing
+
+**Problem**: Bot creates threads but doesn't send temporary notification messages.
+
+**Symptoms**:
+
+- Threads are created successfully
+- Original reply messages are deleted
+- No notification message appears directing users to the thread
+
+**Solutions**:
+
+1. **Check Send Messages Permission**: Ensure the bot can send messages in the channel
+
+   ```
+   Required permission:
+   ✅ Send Messages
+   ```
+
+2. **Monitor Console Output**: Look for notification-related error messages
+
+   ```
+   Missing permissions to send notification message in #channel-name
+   HTTP error sending notification message: 403 Forbidden
+   ```
+
+3. **Verify Channel Restrictions**: Check if the channel has restrictions on message sending
+   - Some channels may have slowmode or other restrictions
+   - Ensure the bot role isn't restricted from sending messages
+
+**Note**: Notification messages automatically delete after 8 seconds. If you see them briefly appear and disappear, this is normal behavior.
+
 ## 🐛 Debug Mode
 
 Enable debug logging for detailed troubleshooting information.

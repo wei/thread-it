@@ -152,6 +152,9 @@ The main bot class that handles Discord events and thread creation.
 - `process_reply_to_thread(message)`: Orchestrates the reply-to-thread conversion
 - `create_thread_from_reply(reply_info)`: Creates a new thread from reply information
 - `repost_reply_in_thread(thread, reply_info)`: Reposts reply content in the created thread
+- `cleanup_messages(reply_info)`: Handles message cleanup and user notifications
+- `delete_original_reply(reply_info)`: Deletes the original reply message
+- `send_temporary_notification(reply_info)`: Sends auto-deleting notification to guide users
 - `validate_permissions(channel)`: Validates bot permissions in a channel
 
 #### `Config`
@@ -184,7 +187,12 @@ graph TD
     F --> G[Create Thread]
     G --> H[Repost Content]
     H --> I[Delete Original Reply]
-    I --> J[Success]
+    I --> J{Deletion Successful?}
+    J -->|Yes| K[Send Notification]
+    J -->|No| L[Skip Notification]
+    K --> M[Auto-delete Notification after 5s]
+    L --> N[Success]
+    M --> N
 ```
 
 ### Required Discord Permissions
