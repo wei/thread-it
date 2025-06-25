@@ -1,0 +1,32 @@
+services:
+  thread-it-bot:
+    image: ghcr.io/wei/thread-it:latest
+    container_name: thread-it-bot
+    restart: unless-stopped
+
+    # Read environment variables from .env
+    env_file:
+      - .env
+
+    # Alternative: Use environment variables directly
+    # environment:
+    #   - DISCORD_TOKEN=${DISCORD_TOKEN}
+    #   - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    # Resource limits (adjust based on your needs)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 256M
+    #       cpus: "0.5"
+    #     reservations:
+    #       memory: 128M
+    #       cpus: "0.25"
+
+    # Logging configuration
+    # logging:
+    #   driver: "json-file"
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"
+    #     labels: "service=thread-it-bot"

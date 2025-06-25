@@ -1,0 +1,7 @@
+services:
+  thread-it-bot:
+    build:
+      context: .
+
+    env_file:
+      - .env

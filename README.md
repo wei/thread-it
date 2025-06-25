@@ -1,6 +1,6 @@
 ![Thread It 🧵](https://socialify.git.ci/wei/thread-it/image?custom_language=Discord&description=1&font=Rokkitt&language=1&logo=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fsvgmoji%2Fsvgmoji%2F%2Fpackages%2Fsvgmoji__blob%2Fsvg%2F1F9F5.svg&name=1&owner=1&pattern=Circuit+Board&theme=Light)
 
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Discord.py](https://img.shields.io/badge/discord.py-2.3.0+-blue.svg)](https://github.com/Rapptz/discord.py)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -10,6 +10,7 @@ A Discord bot that automatically keeps channels clean by converting message repl
 <summary>🎦 Video Demo</summary>
 
 https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
+
 </details>
 
 ## 📋 Table of Contents
@@ -112,6 +113,8 @@ cp .env.example .env
 ```bash
 python bot.py
 ```
+
+See the [Deployment Guide](docs/DEPLOYMENT.md) for production docker deployment instructions.
 
 ## 📖 Usage
 
