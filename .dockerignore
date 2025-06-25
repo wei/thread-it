@@ -95,3 +95,7 @@ tox.ini
 *.bak
 *.backup
 *.old
+
+# Exclude directories
+docs/
+website/
