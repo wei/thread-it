@@ -102,7 +102,7 @@ class ThreadItBot(discord.Client):
             return
 
         # Handle help command
-        if message.content.lower() == "!thread-it help":
+        if message.content.lower().startswith("!thread-it"):
             help_message = (
                 "Hi there! I'm Thread It. My purpose is to keep your Discord channels clean "
                 "by automatically converting message replies into organized public threads.\n\n"
