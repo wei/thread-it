@@ -128,7 +128,7 @@ See the [Deployment Guide](docs/DEPLOYMENT.md) for production docker deployment 
 
 ## 📖 Usage
 
-Once installed and running, Thread It works automatically! No commands are needed.
+Once installed and running, Thread It works automatically! You can message `!thread-it help` for more information.
 
 ### Example Workflow
 

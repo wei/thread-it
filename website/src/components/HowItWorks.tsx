@@ -218,6 +218,17 @@ export default function HowItWorks() {
                 <span className="text-green-500 text-xl">✓</span>
                 <div>
                   <div className="font-semibold text-gray-900">
+                    Help Command
+                  </div>
+                  <div className="text-gray-600 text-sm">
+                    Responds to `!thread-it help` with usage information
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <div>
+                  <div className="font-semibold text-gray-900">
                     Helpful notifications
                   </div>
                   <div className="text-gray-600 text-sm">

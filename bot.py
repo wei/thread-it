@@ -101,6 +101,22 @@ class ThreadItBot(discord.Client):
         if message.author.bot:
             return
 
+        # Handle help command
+        if message.content.lower() == "!thread-it help":
+            help_message = (
+                "Hi there! I'm Thread It. My purpose is to keep your Discord channels clean "
+                "by automatically converting message replies into organized public threads.\n\n"
+                "**How I work:**\n"
+                "1. When someone replies to a message in a channel, I detect it.\n"
+                "2. I then create a new public thread based on the original message.\n"
+                "3. The reply (and any subsequent replies to it) will be moved into this new thread.\n"
+                "4. I'll also delete the original reply from the main channel and send a temporary "
+                "notification to guide users to the new thread.\n\n"
+                "**No commands are needed for my core function!** Just reply to a message, and I'll do the rest."
+            )
+            await message.reply(help_message)
+            return
+
         # 2. Ignore messages that are not replies (message.reference is null)
         if message.reference is None:
             return
