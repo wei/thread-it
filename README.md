@@ -6,12 +6,7 @@
 
 A Discord bot that automatically keeps channels clean by converting message replies into organized public threads. Thread It promotes organized conversations by seamlessly moving reply discussions into dedicated threads, preventing channel clutter while maintaining context.
 
-<details>
-<summary>🎦 Video Demo</summary>
-
-https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
-
-</details>
+[![Add to Discord](https://img.shields.io/badge/Add%20to%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://thread-it.git.ci)
 
 ## 📋 Table of Contents
 
@@ -47,22 +42,37 @@ https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
 
 The result: Clean main channels with organized discussions in dedicated threads!
 
+<details>
+<summary>🎦 Video Demo</summary>
+
+https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
+
+</details>
+
 ## 🚀 Installation
 
-### Prerequisites
+### One-Click Installation
+
+The easiest way to get Thread It running on your Discord server is to clicking **[Add to Discord](https://thread-it.git.ci)**. This will guide you through the process of inviting the bot to your server with the necessary permissions.
+
+### Manual Setup (for self-hosting or development)
+
+If you prefer to self-host Thread It or want to contribute to its development, follow these steps:
+
+#### Prerequisites
 
 - Python 3.9 or higher
 - A Discord bot token
 - Discord server with appropriate permissions
 
-### Step 1: Clone the Repository
+#### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/wei/thread-it.git
 cd thread-it
 ```
 
-### Step 2: Set Up Virtual Environment
+#### Step 2: Set Up Virtual Environment
 
 ```bash
 # Create virtual environment
@@ -75,13 +85,13 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### Step 3: Install Dependencies
+#### Step 3: Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 4: Create Discord Bot
+#### Step 4: Create Discord Bot
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application
@@ -97,7 +107,7 @@ pip install -r requirements.txt
    - Manage Messages
    - Read Message History
 
-### Step 5: Configure Environment Variables
+#### Step 5: Configure Environment Variables
 
 ```bash
 # Copy the example environment file
@@ -108,7 +118,7 @@ cp .env.example .env
 # LOG_LEVEL=INFO
 ```
 
-### Step 6: Run the Bot
+#### Step 6: Run the Bot
 
 ```bash
 python bot.py
