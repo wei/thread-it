@@ -43,9 +43,9 @@ A Discord bot that automatically keeps channels clean by converting message repl
 The result: Clean main channels with organized discussions in dedicated threads!
 
 <details>
-<summary>🎦 Video Demo</summary>
+<summary><strong>Video Demo</strong></summary>
 
-https://github.com/user-attachments/assets/2e4e66df-f214-42a5-b203-8b90483dd849
+https://github.com/user-attachments/assets/02adf199-99a7-4af7-81d3-2ed9cb673574
 
 </details>
 
