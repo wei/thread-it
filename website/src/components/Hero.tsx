@@ -43,7 +43,7 @@ export default function Hero() {
           <div className="mb-8">
             <a
               className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20"
-              href="https://github.com/wei/thread-it"
+              href="https://x.com/weicodes/status/1939404324704264689"
               target="_blank"
               rel="noopener"
             >
