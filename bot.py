@@ -38,8 +38,6 @@ class ThreadItBot(discord.Client):
 
     def setup_logging(self):
         """Configure logging based on environment variables."""
-        log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
-
         # Configure console handler with simpler format for readability
         console_formatter = logging.Formatter(
             '%(asctime)s - %(levelname)s - %(message)s'
@@ -49,7 +47,7 @@ class ThreadItBot(discord.Client):
 
         # Configure root logger
         logging.basicConfig(
-            level=getattr(logging, log_level, logging.INFO),
+            level=Config.LOG_LEVEL,
             handlers=[console_handler]
         )
 
@@ -59,7 +57,7 @@ class ThreadItBot(discord.Client):
 
         # Log startup information
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"Logging configured - Level: {log_level}")
+        self.logger.info(f"Logging configured - Level: {Config.LOG_LEVEL}")
         self.logger.info(f"Bot starting up - discord.py version: {discord.__version__}")
 
     async def on_ready(self):
@@ -502,21 +500,6 @@ class ThreadItBot(discord.Client):
         except Exception as e:
             self.logger.exception(f"Unexpected error deleting system thread message {message.id}: {e}")
 
-    async def handle_rate_limit_error(self, operation_name, retry_after=None):
-        """
-        Handle rate limit errors gracefully.
-
-        Args:
-            operation_name: Name of the operation that was rate limited
-            retry_after: Seconds to wait before retrying (if known)
-        """
-        if retry_after:
-            self.logger.warning(f"Rate limited for {operation_name}, waiting {retry_after} seconds")
-            await asyncio.sleep(retry_after)
-        else:
-            self.logger.warning(f"Rate limited for {operation_name}, using default backoff")
-            await asyncio.sleep(5)  # Default backoff
-
     def validate_permissions(self, channel):
         """
         Validate that the bot has necessary permissions in the channel.
@@ -601,18 +584,16 @@ class ThreadItBot(discord.Client):
 
 def main():
     """Main entry point for the bot."""
-    # Get bot token from environment
-    token = os.getenv('DISCORD_TOKEN')
-    if not token:
-        print("Error: DISCORD_TOKEN environment variable not set!")
-        print("Please set your Discord bot token in the .env file or environment variables.")
-        return
-
-    # Create and run the bot
-    bot = ThreadItBot()
-
     try:
-        bot.run(token)
+        # Validate configuration
+        Config.validate()
+
+        # Create and run the bot
+        bot = ThreadItBot()
+        bot.run(Config.DISCORD_TOKEN)
+
+    except ValueError as e:
+        print(f"Configuration error: {e}")
     except discord.LoginFailure:
         print("Error: Invalid Discord token!")
     except discord.HTTPException as e:

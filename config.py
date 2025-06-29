@@ -21,11 +21,14 @@ class Config:
 
 
     @classmethod
-    def validate(cls) -> bool:
-        """Validate that all required configuration is present."""
+    def validate(cls) -> None:
+        """
+        Validate that all required configuration is present.
+        Raises:
+            ValueError: If a required configuration is missing.
+        """
         if not cls.DISCORD_TOKEN:
-            return False
-        return True
+            raise ValueError("DISCORD_TOKEN environment variable not set.")
 
     @classmethod
     def get_thread_name(cls, original_message_content: str) -> str:
@@ -33,30 +36,26 @@ class Config:
         Generate a thread name from the original message content.
 
         Args:
-            original_message_content: The content of the message being replied to
+            original_message_content: The content of the message being replied to.
 
         Returns:
-            A truncated and cleaned thread name
+            A truncated and cleaned thread name.
         """
         if not original_message_content or original_message_content.isspace():
             return "Discussion Thread"
 
-        # Clean the content for use as a thread name
-        # Remove newlines and extra whitespace
-        cleaned = ' '.join(original_message_content.split())
-
         # Remove mentions, links, and other Discord formatting
-        # This is a basic implementation - could be enhanced
-        words = []
-        for word in cleaned.split():
-            if not (word.startswith('<@') or word.startswith('<#') or
-                   word.startswith('http://') or word.startswith('https://')):
-                words.append(word)
-
-        thread_name = ' '.join(words)
+        cleaned = ' '.join(
+            word for word in original_message_content.split()
+            if not (
+                word.startswith(('<@', '<#', 'http://', 'https://')) or
+                (word.startswith('||') and word.endswith('||')) or
+                (word.startswith('`') and word.endswith('`'))
+            )
+        )
 
         # Truncate to Discord's limit
-        if len(thread_name) > cls.MAX_THREAD_NAME_LENGTH:
-            thread_name = thread_name[:cls.MAX_THREAD_NAME_LENGTH - 3] + "..."
+        if len(cleaned) > cls.MAX_THREAD_NAME_LENGTH:
+            cleaned = cleaned[:cls.MAX_THREAD_NAME_LENGTH - 3] + "..."
 
-        return thread_name or "Discussion Thread"
+        return cleaned or "Discussion Thread"
