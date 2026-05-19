@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -32,11 +32,11 @@
         "recommended": true
       },
       "correctness": {
-        "recommended": true
+        "recommended": true,
+        "useUniqueElementIds": "off"
       },
       "nursery": {
-        "recommended": false,
-        "useUniqueElementIds": "off"
+        "recommended": false
       },
       "performance": {
         "recommended": true
@@ -68,6 +68,11 @@
   "json": {
     "formatter": {
       "enabled": true
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }

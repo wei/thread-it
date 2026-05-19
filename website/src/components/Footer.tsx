@@ -1,4 +1,5 @@
-import { ExternalLink, Github, Heart } from "lucide-react";
+import { ExternalLink, Heart } from "lucide-react";
+import GithubIcon from "./icons/GithubIcon";
 
 export default function Footer() {
   return (
@@ -29,7 +30,7 @@ export default function Footer() {
                 className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors"
                 rel="noopener"
               >
-                <Github className="w-5 h-5" />
+                <GithubIcon className="w-5 h-5" />
               </a>
               <a
                 href="https://discord.com/oauth2/authorize?client_id=1386888801229734018"
@@ -131,7 +132,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm">
             Made with <Heart className="w-4 h-4 inline text-red-500" /> by{" "}
-            <a href="https://wei.me" class="hover:text-white">
+            <a href="https://wei.me" className="hover:text-white">
               @wei
             </a>
             .

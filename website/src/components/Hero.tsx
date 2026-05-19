@@ -1,4 +1,5 @@
-import { ArrowRight, Github } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import GithubIcon from "./icons/GithubIcon";
 
 export default function Hero() {
   return (
@@ -68,7 +69,7 @@ export default function Hero() {
               className="bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-semibold text-lg border border-white/20 hover:bg-white/20 transition-all duration-300 flex items-center gap-2"
               rel="noopener"
             >
-              <Github className="w-5 h-5" />
+              <GithubIcon className="w-5 h-5" />
               View on GitHub
             </a>
           </div>

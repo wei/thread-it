@@ -13,20 +13,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.1.10",
-    "lucide-react": "^0.523.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "@tailwindcss/postcss": "^4.3.0",
+    "lucide-react": "^1.16.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.0.5",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.10",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.0"
+    "@biomejs/biome": "^2.4.15",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13"
   }
 }
