@@ -84,8 +84,8 @@ When a valid reply message is detected, the following sequence of actions is exe
 ### 3.1. Implementation Details
 
 - **Language:** Python 3.9+
-- **Primary Library:** discord.py (>=2.3.0)
-- **Dependencies:** python-dotenv (>=1.0.0)
+- **Primary Library:** discord.py (>=2.7.1)
+- **Dependencies:** python-dotenv (>=1.2.1)
 - **Architecture:** Single-file bot with modular configuration
 - **Configuration:** Environment variable-based with `.env` file support
 
