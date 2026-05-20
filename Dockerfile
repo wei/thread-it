@@ -1,5 +1,4 @@
-# Pin to a specific patch version. Bump deliberately via PR.
-FROM python:3.13.13-alpine3.23 AS deps
+FROM python:3.13-alpine AS deps
 
 WORKDIR /app
 
@@ -11,7 +10,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Build final image
-FROM python:3.13.13-alpine3.23
+FROM python:3.13-alpine
 
 WORKDIR /app
 
