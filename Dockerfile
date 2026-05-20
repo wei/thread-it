@@ -1,6 +1,5 @@
 # Pinned to a specific digest so rebuilds are reproducible and cannot be
 # silently shifted by an upstream tag move. Bump deliberately via PR.
-# python:3.13.13-alpine3.23
 FROM python:3.13.13-alpine3.23@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS deps
 
 WORKDIR /app
