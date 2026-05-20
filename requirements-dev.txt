@@ -2,6 +2,6 @@
 # Runtime deps live in requirements.txt and are also declared in pyproject.toml.
 -r requirements.txt
 ruff>=0.15.13
-mypy>=1.19.1
-pytest>=8.4.2
-pytest-asyncio>=1.2.0
+mypy>=2.1.0
+pytest>=9.0.3
+pytest-asyncio>=1.3.0
