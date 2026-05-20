@@ -50,15 +50,10 @@ function useActiveSection(): string {
     );
     if (!targets.length) return;
 
-    // Activate the section whose top is closest to the upper third of the
-    // viewport. The rootMargin trick narrows the activation band to the
-    // 30%-65% horizontal slice — sections snap into "active" as they enter
-    // that band on scroll.
+    // Activation band sits just below viewport middle so a section only
+    // becomes active once its top crosses ~55% from the top.
     const observer = new IntersectionObserver(
       (entries) => {
-        // Pick the entry closest to the top of the viewport that's currently
-        // intersecting. If multiple are intersecting (e.g. short sections),
-        // take the topmost one.
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
@@ -66,7 +61,7 @@ function useActiveSection(): string {
           setActive(visible[0].target.id);
         }
       },
-      { rootMargin: "-30% 0px -65% 0px", threshold: 0 }
+      { rootMargin: "-55% 0px -40% 0px", threshold: 0 }
     );
 
     for (const t of targets) observer.observe(t);
