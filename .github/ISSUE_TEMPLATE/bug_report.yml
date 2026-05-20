@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a problem with Thread It
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill in as much
+        detail as you can — short, reproducible reports get fixed fastest.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you observe? What did you expect to happen instead?
+      placeholder: |
+        I replied to a message in #general and expected a thread to be
+        created, but the bot deleted my reply with no thread and no error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. In #general, Alice posts "hello"
+        2. Bob replies to Alice's message with "hi"
+        3. Bot ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Thread It version (commit SHA, release tag, or container digest)
+      placeholder: "e89c3fc, v0.1.0, or ghcr.io/wei/thread-it@sha256:..."
+    validations:
+      required: true
+
+  - type: input
+    id: deployment
+    attributes:
+      label: Deployment
+      description: How are you running Thread It?
+      placeholder: "Docker (compose), bare python, ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste the bot's stdout/stderr around the issue. Redact tokens.
+      render: shell
+
+  - type: checkboxes
+    id: confirmed-perms
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I've checked the bot has all the [required permissions](https://github.com/wei/thread-it#-required-permissions) in the affected channel.
+          required: true
+        - label: I've searched existing issues and this hasn't been reported.
+          required: true

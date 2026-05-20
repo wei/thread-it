@@ -42,7 +42,11 @@ We welcome contributions to Thread It! This guide will help you get started with
 2. **Install dependencies**:
 
    ```bash
+   # Runtime only
    pip install -r requirements.txt
+
+   # Or development (adds ruff, mypy, pytest, pytest-asyncio)
+   pip install -r requirements-dev.txt
    ```
 
 3. **Set up environment variables**:
@@ -50,6 +54,19 @@ We welcome contributions to Thread It! This guide will help you get started with
    cp .env.example .env
    # Edit .env with your test bot token
    ```
+
+### Dev commands
+
+```bash
+ruff check .                          # lint
+ruff check --fix .                    # auto-fix what ruff can
+mypy bot.py config.py threadit/       # type-check
+pytest                                # run tests
+pytest -k <name>                      # run a single test
+pytest --cov=threadit --cov=config    # with coverage (install pytest-cov first)
+```
+
+CI runs all three on every PR — see `.github/workflows/ci.yml`.
 
 ### Step 3: Create a Feature Branch
 
@@ -76,30 +93,24 @@ Use descriptive branch names:
 ### Example Code Style
 
 ```python
-async def create_thread_from_reply(self, reply_info: Dict[str, Any]) -> Optional[discord.Thread]:
-    """
-    Create a public thread from reply information.
-
-    Args:
-        reply_info: Dictionary containing reply and parent message information
-
-    Returns:
-        The created thread, or None if creation failed
-    """
+async def create_thread_from_reply(self, reply_info: ReplyInfo) -> discord.Thread | None:
+    """Create a public thread from the parent message."""
     try:
-        parent_message = reply_info['parent_message']
+        parent_message = reply_info.parent_message
         thread_name = Config.get_thread_name(parent_message.content)
-
-        thread = await parent_message.create_thread(
+        return await parent_message.create_thread(
             name=thread_name,
-            auto_archive_duration=Config.DEFAULT_AUTO_ARCHIVE_DURATION
+            auto_archive_duration=Config.DEFAULT_AUTO_ARCHIVE_DURATION,
         )
-
-        return thread
-    except Exception as e:
-        self.logger.error(f"Failed to create thread: {e}")
+    except discord.Forbidden:
+        self.logger.error(f"Missing permissions on message {parent_message.id}")
+        return None
+    except discord.HTTPException as e:
+        self.logger.error(f"HTTP error creating thread: {e}")
         return None
 ```
+
+Note: `reply_info` is a frozen `ReplyInfo` dataclass (`threadit/types.py`), not a dict. Use `dataclasses.replace()` to produce updated copies.
 
 ### Documentation Style
 
@@ -110,13 +121,49 @@ async def create_thread_from_reply(self, reply_info: Dict[str, Any]) -> Optional
 
 ## 🧪 Testing Requirements
 
-Before submitting a pull request, manually test your changes with a test Discord
-server:
+### Automated tests (mandatory)
 
-1. Ensure the bot runs without errors using `python bot.py`.
-2. Verify that replies are converted to threads with proper embed attribution showing the author's avatar and display name.
-3. Confirm that attachments and embeds are preserved, and that the original reply author is added as a thread participant.
-4. Check the console output for warnings or exceptions.
+Every PR must keep `pytest` green. New behavior needs new tests — see `tests/`
+for examples. The suite is fast (<1s) and runs without any Discord network:
+
+```bash
+pytest
+```
+
+Services in `threadit/` are designed to be unit-testable in isolation:
+`PermissionsService`, `ThreadingOrchestrator`, and the `build_attachment_files`
+helper each take their dependencies as constructor args / callables. See
+`tests/test_permissions.py` and `tests/test_orchestrator.py` for patterns.
+
+### Manual smoke test (recommended before merging anything user-facing)
+
+Set up a personal test Discord server and invite your dev bot with all
+required permissions (View Channels, Send Messages, Send Messages in Threads,
+Create Public Threads, Read Message History, Embed Links, Attach Files,
+Manage Messages). Then walk this checklist:
+
+- [ ] Bot starts: `python bot.py` connects without errors; the `/thread-it`
+      command appears in Discord's slash-command picker after sync.
+- [ ] **Happy path**: reply to a message → a thread is created on the parent,
+      your reply is reposted in the thread inside an attribution embed
+      (author avatar + display name + timestamp), the original reply is
+      deleted, a short notification message appears for ~8 seconds.
+- [ ] **Attachment**: reply with an image attached → it's re-uploaded into
+      the thread post.
+- [ ] **Oversize attachment**: reply with a file > `MAX_ATTACHMENT_BYTES`
+      (default 25 MiB) → original is NOT deleted, log shows the skip.
+- [ ] **Concurrent burst**: reply to the same parent from two clients within
+      ~1 second → exactly one thread is created, both replies end up inside
+      it.
+- [ ] **Missing perms**: revoke `Embed Links` from the bot role → first
+      reply produces a single in-channel warning; further replies within an
+      hour are silent.
+- [ ] **DM**: send `!thread-it` to the bot in DMs → help text returned
+      without permission block; no traceback.
+- [ ] **Slash command**: `/thread-it` in a configured channel → ephemeral
+      help reply visible only to you.
+
+Note any unexpected behavior or log warnings in your PR description.
 
 ## 📤 Submitting Changes
 
@@ -157,77 +204,74 @@ Include the following details when reporting a problem:
 - What you expected to happen
 - What actually happened (include console output if possible)
 
-## 📚 API Documentation
+## 📚 Project Architecture
 
-### Core Classes
-
-#### `ThreadItBot`
-
-The main bot class that handles Discord events and thread creation.
-
-**Key Methods:**
-
-- `on_message(message)`: Main event handler for processing message replies
-- `process_reply_to_thread(message)`: Orchestrates the reply-to-thread conversion
-- `create_thread_from_reply(reply_info)`: Creates a new thread from reply information
-- `repost_reply_in_thread(thread, reply_info)`: Reposts reply content in the created thread using Discord embeds for rich attribution and adds the author as a thread participant
-- `cleanup_messages(reply_info)`: Handles message cleanup and user notifications
-- `delete_original_reply(reply_info)`: Deletes the original reply message
-- `send_temporary_notification(reply_info)`: Sends auto-deleting notification to guide users
-- `validate_permissions(channel)`: Validates bot permissions in a channel
-
-#### `Config`
-
-Configuration management class containing all bot settings.
-
-**Key Methods:**
-
-- `validate()`: Validates that required configuration is present
-- `get_thread_name(content)`: Generates thread names from message content
-
-**Configuration Constants:**
-
-```python
-DEFAULT_AUTO_ARCHIVE_DURATION = 1440  # 24 hours in minutes
-MAX_THREAD_NAME_LENGTH = 100          # Discord's thread name limit
+```
+bot.py                  # entry: build commands.Bot, wire services, run
+config.py               # Config class, get_thread_name, _int_env
+threadit/
+  __init__.py
+  types.py              # ReplyInfo dataclass, DEFAULT_CLIENT_ID, invite_url
+  attachments.py        # build_attachment_files (size-capped download)
+  permissions.py        # PermissionsService (validation + cooldown + warnings)
+  orchestrator.py       # ThreadingOrchestrator (reply→thread flow)
+  cog.py                # ThreadItCog (gateway listeners + /thread-it command)
+tests/                  # pytest suite, runs without Discord network
 ```
 
-### Event Flow
+### Layer responsibilities
+
+- **`bot.py`** wires everything but owns no logic. If a change is purely
+  about gateway intents, prefix, or startup sequencing, edit here.
+- **`threadit/cog.py`** translates gateway events into orchestrator calls
+  and serves the user-facing `/thread-it` (and legacy `!thread-it`) help
+  command. Filters (bot/non-reply/thread/DM) live here.
+- **`threadit/orchestrator.py`** owns the reply→thread state machine: the
+  per-parent `_with_parent_lock`, `gather_reply_information`, thread
+  creation, repost, cleanup, and the deferred notification auto-delete.
+- **`threadit/permissions.py`** is the single source of truth for what
+  permissions are required and how the per-channel warning cooldown works.
+- **`threadit/types.py`** is for shared, dependency-free pieces.
+
+### Event flow
 
 ```mermaid
 graph TD
-    A[Message Posted] --> B{Is Reply?}
-    B -->|No| C[Ignore]
-    B -->|Yes| D{From Bot?}
-    D -->|Yes| C
-    D -->|No| E{In Thread?}
-    E -->|Yes| C
-    E -->|No| F[Validate Permissions]
-    F --> G[Create Thread]
-    G --> H[Repost Content]
-    H --> I[Delete Original Reply]
-    I --> J{Deletion Successful?}
-    J -->|Yes| K[Send Notification]
-    J -->|No| L[Skip Notification]
-    K --> M[Auto-delete Notification after 8s]
-    L --> N[Success]
-    M --> N
+    A[on_message] --> B{Filters: bot? reply? not-in-thread? guild? not '!thread-it'?}
+    B -->|fails any| C[Ignore]
+    B -->|all pass| D[Validate permissions]
+    D -->|missing required| E[Rate-limited warning in channel]
+    D -->|ok| F[gather_reply_information → ReplyInfo]
+    F --> G["_with_parent_lock(parent_id)"]
+    G --> H{Parent has thread?}
+    H -->|yes| I[Use existing thread]
+    H -->|no| J[create_thread_from_reply]
+    I --> K[repost_reply_in_thread]
+    J --> K
+    K -->|all attachments uploaded| L[cleanup_messages]
+    K -->|partial failure| M[Skip cleanup, keep original intact]
+    L --> N[delete original + send temp notification]
+    N --> O[asyncio.create_task: _delete_after 8s]
 ```
 
-### Required Discord Permissions
+### Config
 
-| Permission               | Purpose                            |
-| ------------------------ | ---------------------------------- |
-| View Channels            | Read messages in channels          |
-| Send Messages            | Send messages in main channels     |
-| Send Messages in Threads | Send messages in created threads   |
-| Create Public Threads    | Create threads on messages         |
-| Manage Messages          | Delete original reply messages     |
-| Read Message History     | Access message history for context |
+`Config` (in `config.py`) holds all settings, validated at startup. Notable
+fields:
 
-### Gateway Intents
+```python
+DEFAULT_AUTO_ARCHIVE_DURATION       # 1440 (24h)
+MAX_THREAD_NAME_LENGTH              # 100 (Discord's limit)
+MAX_ATTACHMENT_BYTES                # 25 MiB; env-overridable
+PERMISSION_WARNING_COOLDOWN_SECONDS # 3600; env-overridable
+```
 
-- **Message Content Intent** (Privileged): Required to read message content
+### Required Discord permissions / intents
+
+See the [README](../README.md#-required-permissions) for the full table.
+`Embed Links` is required (the bot always posts via `discord.Embed`);
+`Attach Files` is required only when the reply being processed carries
+attachments.
 
 ## 📜 Code of Conduct
 

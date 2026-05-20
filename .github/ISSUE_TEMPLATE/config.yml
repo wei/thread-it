@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/wei/thread-it/discussions
+    about: Ask questions, share setups, or discuss ideas before filing a feature request.
