@@ -26,6 +26,19 @@ _EVERYONE_RE = re.compile(r'@(everyone|here)\b', re.IGNORECASE)
 _WHITESPACE_RE = re.compile(r'\s+')
 
 
+def _int_env(name: str, default: int) -> int:
+    """Read an integer env var; raise a clear error instead of Python's default."""
+    raw = os.getenv(name)
+    if raw is None or raw == '':
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"Environment variable {name} must be an integer, got {raw!r}"
+        ) from exc
+
+
 class Config:
     """Configuration class containing all bot settings."""
 
@@ -42,13 +55,11 @@ class Config:
     # Attachment Configuration
     # Per-attachment cap to avoid OOM on small hosts. Discord's per-file
     # limit for non-boosted servers is 25 MiB; we mirror that as the default.
-    MAX_ATTACHMENT_BYTES: int = int(
-        os.getenv('MAX_ATTACHMENT_BYTES', str(25 * 1024 * 1024))
-    )
+    MAX_ATTACHMENT_BYTES: int = _int_env('MAX_ATTACHMENT_BYTES', 25 * 1024 * 1024)
 
     # Rate-limit for in-channel "missing permission" warnings, per channel.
-    PERMISSION_WARNING_COOLDOWN_SECONDS: int = int(
-        os.getenv('PERMISSION_WARNING_COOLDOWN_SECONDS', '3600')
+    PERMISSION_WARNING_COOLDOWN_SECONDS: int = _int_env(
+        'PERMISSION_WARNING_COOLDOWN_SECONDS', 3600
     )
 
     @classmethod
