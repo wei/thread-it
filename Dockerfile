@@ -1,6 +1,5 @@
-# Pinned to a specific digest so rebuilds are reproducible and cannot be
-# silently shifted by an upstream tag move. Bump deliberately via PR.
-FROM python:3.13.13-alpine3.23@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc AS deps
+# Pin to a specific patch version. Bump deliberately via PR.
+FROM python:3.13.13-alpine3.23 AS deps
 
 WORKDIR /app
 
@@ -12,7 +11,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Build final image
-FROM python:3.13.13-alpine3.23@sha256:420cd0bf0f3998275875e02ecd5808168cf0843cbb4d3c536432f729247b2acc
+FROM python:3.13.13-alpine3.23
 
 WORKDIR /app
 
