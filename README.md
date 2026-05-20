@@ -120,6 +120,8 @@ pytest             # run tests
    - Create Public Threads
    - Manage Messages
    - Read Message History
+   - Embed Links
+   - Attach Files
 
 #### Step 5: Configure Environment Variables
 
@@ -178,14 +180,16 @@ Thread It requires specific Discord permissions to function properly. When invit
 
 ### Bot Permissions
 
-| Permission               | Purpose                            |
-| ------------------------ | ---------------------------------- |
-| View Channels            | Read messages in channels          |
-| Send Messages            | Send messages in main channels     |
-| Send Messages in Threads | Send messages in created threads   |
-| Create Public Threads    | Create threads on messages         |
-| Manage Messages          | Delete original reply messages     |
-| Read Message History     | Access message history for context |
+| Permission               | Purpose                                  |
+| ------------------------ | ---------------------------------------- |
+| View Channels            | Read messages in channels                |
+| Send Messages            | Send messages in main channels           |
+| Send Messages in Threads | Send messages in created threads         |
+| Create Public Threads    | Create threads on messages               |
+| Manage Messages          | Delete original reply messages           |
+| Read Message History     | Access message history for context       |
+| Embed Links              | Post reply content as embeds in threads  |
+| Attach Files             | Re-upload reply attachments into threads |
 
 ### Gateway Intents
 
