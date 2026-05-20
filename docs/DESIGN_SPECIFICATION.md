@@ -83,7 +83,7 @@ When a valid reply message is detected, the following sequence of actions is exe
 
 ### 3.1. Implementation Details
 
-- **Language:** Python 3.9+
+- **Language:** Python 3.13+
 - **Primary Library:** discord.py (>=2.7.1)
 - **Dependencies:** python-dotenv (>=1.2.1)
 - **Architecture:** Single-file bot with modular configuration
@@ -209,7 +209,7 @@ The bot implements robust error handling throughout all operations:
 
 ### 8.1. Prerequisites
 
-- Python 3.9 or higher
+- Python 3.13 or higher
 - Discord bot token from Discord Developer Portal
 - Server with appropriate permissions
 

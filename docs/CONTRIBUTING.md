@@ -16,7 +16,7 @@ We welcome contributions to Thread It! This guide will help you get started with
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.13 or higher
 - Git
 - A Discord bot token for testing
 - A test Discord server

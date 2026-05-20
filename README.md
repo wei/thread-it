@@ -1,6 +1,6 @@
 ![Thread It 🧵](https://socialify.git.ci/wei/thread-it/image?custom_language=Discord&description=1&font=Rokkitt&language=1&logo=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fsvgmoji%2Fsvgmoji%2F%2Fpackages%2Fsvgmoji__blob%2Fsvg%2F1F9F5.svg&name=1&owner=1&pattern=Circuit+Board&theme=Light)
 
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Discord.py](https://img.shields.io/badge/discord.py-2.7.1+-blue.svg)](https://github.com/Rapptz/discord.py)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -61,7 +61,7 @@ If you prefer to self-host Thread It or want to contribute to its development, f
 
 #### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.13 or higher
 - A Discord bot token
 - Discord server with appropriate permissions
 
