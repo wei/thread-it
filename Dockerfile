@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM python:3-alpine AS deps
+FROM python:3.13-alpine AS deps
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Build final image
-FROM python:3-alpine
+FROM python:3.13-alpine
 
 WORKDIR /app
 
