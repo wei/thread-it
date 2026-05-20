@@ -10,6 +10,7 @@ import asyncio
 import io
 import logging
 import time
+from contextlib import asynccontextmanager
 
 import discord
 
@@ -65,6 +66,27 @@ class ThreadItBot(discord.Client):
     def _client_id(self):
         """Return our bot's client_id once logged in, falling back to default."""
         return str(self.user.id) if self.user else DEFAULT_CLIENT_ID
+
+    @asynccontextmanager
+    async def _with_parent_lock(self, parent_id):
+        """
+        Serialize concurrent work on the same parent message and pop the dict
+        entry when the last waiter releases.
+
+        Single-threaded event loop invariant: when waiter_count hits zero
+        inside the finally, no other coroutine currently holds a reference
+        to the lock via setdefault, so removing the entry cannot race a
+        peer's acquisition.
+        """
+        entry = self._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
+        entry[1] += 1
+        try:
+            async with entry[0]:
+                yield
+        finally:
+            entry[1] -= 1
+            if entry[1] == 0:
+                self._parent_locks.pop(parent_id, None)
 
     def setup_logging(self):
         """Configure logging based on environment variables."""
@@ -252,40 +274,29 @@ class ThreadItBot(discord.Client):
             # Serialize per-parent-message so concurrent replies don't race
             # the "thread exists?" check and end up creating duplicates / dropping replies.
             parent_id = reply_info['parent_message'].id
-            entry = self._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
-            entry[1] += 1
             thread = None
-            try:
-                async with entry[0]:
-                    # Re-fetch the parent inside the lock so we pick up a thread
-                    # that another coroutine just created.
-                    try:
-                        parent = await reply_info['channel'].fetch_message(parent_id)
-                        reply_info['parent_message'] = parent
-                    except discord.NotFound:
-                        self.logger.info(
-                            f"Parent message {parent_id} deleted before thread creation; skipping"
-                        )
-                        return
-                    except (discord.Forbidden, discord.HTTPException) as e:
-                        # Transient or permission issue on re-fetch — proceed with
-                        # the parent we already loaded in gather_reply_information.
-                        self.logger.warning(
-                            f"Re-fetch of parent {parent_id} failed ({e}); using cached copy"
-                        )
+            async with self._with_parent_lock(parent_id):
+                # Re-fetch the parent inside the lock so we pick up a thread
+                # that another coroutine just created.
+                try:
+                    parent = await reply_info['channel'].fetch_message(parent_id)
+                    reply_info['parent_message'] = parent
+                except discord.NotFound:
+                    self.logger.info(
+                        f"Parent message {parent_id} deleted before thread creation; skipping"
+                    )
+                    return
+                except (discord.Forbidden, discord.HTTPException) as e:
+                    # Transient or permission issue on re-fetch — proceed with
+                    # the parent we already loaded in gather_reply_information.
+                    self.logger.warning(
+                        f"Re-fetch of parent {parent_id} failed ({e}); using cached copy"
+                    )
 
-                    if reply_info['parent_message'].thread is not None:
-                        thread = reply_info['parent_message'].thread
-                    else:
-                        thread = await self.create_thread_from_reply(reply_info)
-            finally:
-                entry[1] -= 1
-                if entry[1] == 0:
-                    # Safe pop: under asyncio's single-threaded loop, a zero
-                    # waiter count means no other coroutine currently holds a
-                    # reference via setdefault, so dropping the entry cannot
-                    # race a peer's lock acquisition.
-                    self._parent_locks.pop(parent_id, None)
+                if reply_info['parent_message'].thread is not None:
+                    thread = reply_info['parent_message'].thread
+                else:
+                    thread = await self.create_thread_from_reply(reply_info)
 
             if thread is None:
                 self.logger.warning(f"Failed to create thread for reply {reply_info['message_id']}")

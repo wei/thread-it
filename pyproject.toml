@@ -23,6 +23,9 @@ dev = [
 Homepage = "https://github.com/wei/thread-it"
 Issues = "https://github.com/wei/thread-it/issues"
 
+[project.scripts]
+thread-it = "bot:main"
+
 # Single-module project; tell setuptools not to scan for packages.
 [tool.setuptools]
 py-modules = ["bot", "config"]
@@ -45,9 +48,6 @@ ignore = [
     "E501",  # line length handled by formatter; long strings in user-facing copy are fine
     "B008",  # function call in default arg (discord.py uses sentinel objects)
 ]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011"]  # allow assert in tests
 
 [tool.mypy]
 python_version = "3.13"

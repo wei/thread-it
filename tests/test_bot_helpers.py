@@ -217,16 +217,23 @@ class TestPermissionWarningRateLimit:
         channel.name = "test"
         channel.send = AsyncMock()
 
+        # Pin time.monotonic() so the test is deterministic regardless of how
+        # long the host has been up. Specifically, return a value that is LESS
+        # than the cooldown — this is the freshly-booted-host scenario where
+        # the prior `0.0` sentinel would have suppressed the very first warning.
+        monotonic_values = iter([10.0, 11.0, 12.0])
         with (
             patch.object(threadit_bot, "check_specific_permission", return_value=True),
             patch.object(threadit_bot, "_client_id", return_value="999"),
+            patch("bot.time.monotonic", side_effect=lambda: next(monotonic_values)),
         ):
             await threadit_bot.send_permission_error_message(channel, ["Embed Links"])
             await threadit_bot.send_permission_error_message(channel, ["Embed Links"])
             await threadit_bot.send_permission_error_message(channel, ["Embed Links"])
 
         assert channel.send.await_count == 1, (
-            "Subsequent warnings must be suppressed by the per-channel cooldown"
+            "First warning must send even on freshly-booted hosts where "
+            "monotonic() < cooldown; subsequent warnings must be suppressed"
         )
 
     async def test_different_channels_are_independent(self, threadit_bot):
@@ -253,24 +260,28 @@ class TestPermissionWarningRateLimit:
 
 
 class TestParentLockCleanup:
+    """
+    These tests drive the production helper ThreadItBot._with_parent_lock
+    directly, so a regression in the lock/cleanup wiring would fail them.
+    """
+
     async def test_lock_dict_empties_after_use(self, threadit_bot):
         import asyncio
 
         parent_id = 12345
 
         async def worker():
-            entry = threadit_bot._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
-            entry[1] += 1
-            try:
-                async with entry[0]:
-                    await asyncio.sleep(0)
-            finally:
-                entry[1] -= 1
-                if entry[1] == 0:
-                    threadit_bot._parent_locks.pop(parent_id, None)
+            async with threadit_bot._with_parent_lock(parent_id):
+                await asyncio.sleep(0)
 
         await asyncio.gather(*[worker() for _ in range(5)])
         assert parent_id not in threadit_bot._parent_locks
+
+    async def test_lock_dict_empties_after_single_use(self, threadit_bot):
+        """No-contention case: a single acquire/release must still clean up."""
+        async with threadit_bot._with_parent_lock(42):
+            pass
+        assert 42 not in threadit_bot._parent_locks
 
     async def test_three_concurrent_workers_serialize(self, threadit_bot):
         """A→B→C must execute strictly serialized, not interleaved."""
@@ -281,20 +292,20 @@ class TestParentLockCleanup:
 
         async def worker(name: str, delay: float):
             await asyncio.sleep(delay)
-            entry = threadit_bot._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
-            entry[1] += 1
-            try:
-                async with entry[0]:
-                    events.append(f"{name}-enter")
-                    await asyncio.sleep(0.01)
-                    events.append(f"{name}-exit")
-            finally:
-                entry[1] -= 1
-                if entry[1] == 0:
-                    threadit_bot._parent_locks.pop(parent_id, None)
+            async with threadit_bot._with_parent_lock(parent_id):
+                events.append(f"{name}-enter")
+                await asyncio.sleep(0.01)
+                events.append(f"{name}-exit")
 
         await asyncio.gather(worker("A", 0), worker("B", 0.001), worker("C", 0.002))
 
         # No interleaving: each worker's enter and exit appear consecutively.
         for i in range(0, 6, 2):
             assert events[i + 1] == events[i].replace("-enter", "-exit"), events
+
+    async def test_lock_releases_on_exception(self, threadit_bot):
+        """If the body raises, the entry must still be removed (no leak)."""
+        with pytest.raises(RuntimeError, match="boom"):
+            async with threadit_bot._with_parent_lock(77):
+                raise RuntimeError("boom")
+        assert 77 not in threadit_bot._parent_locks
