@@ -6,7 +6,6 @@ Handles all configuration settings and constants.
 import os
 import re
 import unicodedata
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -43,7 +42,7 @@ class Config:
     """Configuration class containing all bot settings."""
 
     # Discord API Configuration
-    DISCORD_TOKEN: Optional[str] = os.getenv('DISCORD_TOKEN')
+    DISCORD_TOKEN: str | None = os.getenv('DISCORD_TOKEN')
 
     # Logging Configuration
     LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO').upper()

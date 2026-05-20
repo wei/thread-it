@@ -91,6 +91,20 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+For development (running tests, linting, type-checking), install the dev extras instead:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then use:
+
+```bash
+ruff check .       # lint
+mypy bot.py config.py  # type-check
+pytest             # run tests
+```
+
 #### Step 4: Create Discord Bot
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)

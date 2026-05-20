@@ -1,0 +1,7 @@
+# Development dependencies (lint, type-check, test).
+# Runtime deps live in requirements.txt and are also declared in pyproject.toml.
+-r requirements.txt
+ruff>=0.15.13
+mypy>=1.19.1
+pytest>=8.4.2
+pytest-asyncio>=1.2.0

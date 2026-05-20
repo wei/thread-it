@@ -6,12 +6,13 @@ A Discord bot that automatically converts message replies into organized public 
 This keeps main channel feeds clean and ensures follow-up discussions are neatly contained.
 """
 
+import asyncio
 import io
 import logging
-import asyncio
 import time
-from typing import Optional
+
 import discord
+
 from config import Config
 
 # Default invite URL client_id used in static error text before login.
@@ -172,14 +173,14 @@ class ThreadItBot(discord.Client):
                     )
                 elif missing_optional:
                     help_message += (
-                        f"\n\n📝 **Optional Enhancement**\n"
-                        f"For the best experience, consider granting the 'Manage Messages' permission. "
-                        f"This allows me to clean up the original reply messages after moving them to threads. "
-                        f"Without this permission, I'll still create threads but won't delete the original replies."
+                        "\n\n📝 **Optional Enhancement**\n"
+                        "For the best experience, consider granting the 'Manage Messages' permission. "
+                        "This allows me to clean up the original reply messages after moving them to threads. "
+                        "Without this permission, I'll still create threads but won't delete the original replies."
                     )
                 else:
                     help_message += (
-                        f"\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
+                        "\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
                     )
 
             await message.reply(help_message)
@@ -732,6 +733,9 @@ class ThreadItBot(discord.Client):
         if not getattr(channel, 'guild', None):
             return False, ["Not a guild channel"], []
 
+        if self.user is None:
+            return False, ["Bot not yet ready"], []
+
         bot_member = channel.guild.get_member(self.user.id)
         if not bot_member:
             return False, ["Bot not in guild"], []
@@ -782,6 +786,9 @@ class ThreadItBot(discord.Client):
             bool: True if the bot has the permission, False otherwise
         """
         if not getattr(channel, 'guild', None):
+            return False
+
+        if self.user is None:
             return False
 
         bot_member = channel.guild.get_member(self.user.id)
@@ -849,6 +856,9 @@ class ThreadItBot(discord.Client):
             guild: The guild to check permissions for
         """
         try:
+            if self.user is None:
+                self.logger.warning(f"Skipping permission log for {guild.name}: bot not yet ready")
+                return
             bot_member = guild.get_member(self.user.id)
             if not bot_member:
                 self.logger.warning(f"Bot not found as member in guild {guild.name} (ID: {guild.id})")
@@ -880,14 +890,14 @@ class ThreadItBot(discord.Client):
             # Log text channels where bot might have issues
             problematic_channels = []
             for channel in guild.text_channels:
-                has_required, missing_required, missing_optional = self.validate_permissions(channel)
+                has_required, missing_required, _ = self.validate_permissions(channel)
                 if not has_required:
                     problematic_channels.append(f"#{channel.name} (missing: {', '.join(missing_required)})")
 
             if problematic_channels:
                 self.logger.warning(f"  Channels with permission issues: {'; '.join(problematic_channels)}")
             else:
-                self.logger.info(f"  All text channels have required permissions ✓")
+                self.logger.info("  All text channels have required permissions ✓")
 
         except Exception as e:
             self.logger.exception(f"Error logging permissions for guild {guild.name} (ID: {guild.id}): {e}")
