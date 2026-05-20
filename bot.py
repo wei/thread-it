@@ -6,12 +6,14 @@ A Discord bot that automatically converts message replies into organized public 
 This keeps main channel feeds clean and ensures follow-up discussions are neatly contained.
 """
 
+import asyncio
 import io
 import logging
-import asyncio
 import time
-from typing import Optional
+from contextlib import asynccontextmanager
+
 import discord
+
 from config import Config
 
 # Default invite URL client_id used in static error text before login.
@@ -64,6 +66,27 @@ class ThreadItBot(discord.Client):
     def _client_id(self):
         """Return our bot's client_id once logged in, falling back to default."""
         return str(self.user.id) if self.user else DEFAULT_CLIENT_ID
+
+    @asynccontextmanager
+    async def _with_parent_lock(self, parent_id):
+        """
+        Serialize concurrent work on the same parent message and pop the dict
+        entry when the last waiter releases.
+
+        Single-threaded event loop invariant: when waiter_count hits zero
+        inside the finally, no other coroutine currently holds a reference
+        to the lock via setdefault, so removing the entry cannot race a
+        peer's acquisition.
+        """
+        entry = self._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
+        entry[1] += 1
+        try:
+            async with entry[0]:
+                yield
+        finally:
+            entry[1] -= 1
+            if entry[1] == 0:
+                self._parent_locks.pop(parent_id, None)
 
     def setup_logging(self):
         """Configure logging based on environment variables."""
@@ -172,14 +195,14 @@ class ThreadItBot(discord.Client):
                     )
                 elif missing_optional:
                     help_message += (
-                        f"\n\n📝 **Optional Enhancement**\n"
-                        f"For the best experience, consider granting the 'Manage Messages' permission. "
-                        f"This allows me to clean up the original reply messages after moving them to threads. "
-                        f"Without this permission, I'll still create threads but won't delete the original replies."
+                        "\n\n📝 **Optional Enhancement**\n"
+                        "For the best experience, consider granting the 'Manage Messages' permission. "
+                        "This allows me to clean up the original reply messages after moving them to threads. "
+                        "Without this permission, I'll still create threads but won't delete the original replies."
                     )
                 else:
                     help_message += (
-                        f"\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
+                        "\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
                     )
 
             await message.reply(help_message)
@@ -251,40 +274,29 @@ class ThreadItBot(discord.Client):
             # Serialize per-parent-message so concurrent replies don't race
             # the "thread exists?" check and end up creating duplicates / dropping replies.
             parent_id = reply_info['parent_message'].id
-            entry = self._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
-            entry[1] += 1
             thread = None
-            try:
-                async with entry[0]:
-                    # Re-fetch the parent inside the lock so we pick up a thread
-                    # that another coroutine just created.
-                    try:
-                        parent = await reply_info['channel'].fetch_message(parent_id)
-                        reply_info['parent_message'] = parent
-                    except discord.NotFound:
-                        self.logger.info(
-                            f"Parent message {parent_id} deleted before thread creation; skipping"
-                        )
-                        return
-                    except (discord.Forbidden, discord.HTTPException) as e:
-                        # Transient or permission issue on re-fetch — proceed with
-                        # the parent we already loaded in gather_reply_information.
-                        self.logger.warning(
-                            f"Re-fetch of parent {parent_id} failed ({e}); using cached copy"
-                        )
+            async with self._with_parent_lock(parent_id):
+                # Re-fetch the parent inside the lock so we pick up a thread
+                # that another coroutine just created.
+                try:
+                    parent = await reply_info['channel'].fetch_message(parent_id)
+                    reply_info['parent_message'] = parent
+                except discord.NotFound:
+                    self.logger.info(
+                        f"Parent message {parent_id} deleted before thread creation; skipping"
+                    )
+                    return
+                except (discord.Forbidden, discord.HTTPException) as e:
+                    # Transient or permission issue on re-fetch — proceed with
+                    # the parent we already loaded in gather_reply_information.
+                    self.logger.warning(
+                        f"Re-fetch of parent {parent_id} failed ({e}); using cached copy"
+                    )
 
-                    if reply_info['parent_message'].thread is not None:
-                        thread = reply_info['parent_message'].thread
-                    else:
-                        thread = await self.create_thread_from_reply(reply_info)
-            finally:
-                entry[1] -= 1
-                if entry[1] == 0:
-                    # Safe pop: under asyncio's single-threaded loop, a zero
-                    # waiter count means no other coroutine currently holds a
-                    # reference via setdefault, so dropping the entry cannot
-                    # race a peer's lock acquisition.
-                    self._parent_locks.pop(parent_id, None)
+                if reply_info['parent_message'].thread is not None:
+                    thread = reply_info['parent_message'].thread
+                else:
+                    thread = await self.create_thread_from_reply(reply_info)
 
             if thread is None:
                 self.logger.warning(f"Failed to create thread for reply {reply_info['message_id']}")
@@ -732,6 +744,9 @@ class ThreadItBot(discord.Client):
         if not getattr(channel, 'guild', None):
             return False, ["Not a guild channel"], []
 
+        if self.user is None:
+            return False, ["Bot not yet ready"], []
+
         bot_member = channel.guild.get_member(self.user.id)
         if not bot_member:
             return False, ["Bot not in guild"], []
@@ -784,6 +799,9 @@ class ThreadItBot(discord.Client):
         if not getattr(channel, 'guild', None):
             return False
 
+        if self.user is None:
+            return False
+
         bot_member = channel.guild.get_member(self.user.id)
         if not bot_member:
             return False
@@ -807,10 +825,13 @@ class ThreadItBot(discord.Client):
             return
 
         # Rate-limit per channel so a misconfigured server doesn't get spammed
-        # with the same warning on every reply.
+        # with the same warning on every reply. Use None (not 0.0) as the
+        # "never sent" sentinel: time.monotonic() can be small (< cooldown)
+        # on a freshly-booted host, which would otherwise suppress the very
+        # first warning.
         now = time.monotonic()
-        last_sent = self._permission_warning_sent_at.get(channel.id, 0.0)
-        if now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
+        last_sent = self._permission_warning_sent_at.get(channel.id)
+        if last_sent is not None and now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
             self.logger.debug(
                 f"Suppressing duplicate permission warning in #{channel.name} "
                 f"(cooldown {Config.PERMISSION_WARNING_COOLDOWN_SECONDS}s)"
@@ -849,6 +870,9 @@ class ThreadItBot(discord.Client):
             guild: The guild to check permissions for
         """
         try:
+            if self.user is None:
+                self.logger.warning(f"Skipping permission log for {guild.name}: bot not yet ready")
+                return
             bot_member = guild.get_member(self.user.id)
             if not bot_member:
                 self.logger.warning(f"Bot not found as member in guild {guild.name} (ID: {guild.id})")
@@ -880,14 +904,14 @@ class ThreadItBot(discord.Client):
             # Log text channels where bot might have issues
             problematic_channels = []
             for channel in guild.text_channels:
-                has_required, missing_required, missing_optional = self.validate_permissions(channel)
+                has_required, missing_required, _ = self.validate_permissions(channel)
                 if not has_required:
                     problematic_channels.append(f"#{channel.name} (missing: {', '.join(missing_required)})")
 
             if problematic_channels:
                 self.logger.warning(f"  Channels with permission issues: {'; '.join(problematic_channels)}")
             else:
-                self.logger.info(f"  All text channels have required permissions ✓")
+                self.logger.info("  All text channels have required permissions ✓")
 
         except Exception as e:
             self.logger.exception(f"Error logging permissions for guild {guild.name} (ID: {guild.id}): {e}")
