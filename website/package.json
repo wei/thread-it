@@ -10,7 +10,8 @@
     "format": "biome format . --write",
     "check": "biome check .",
     "check:fix": "biome check . --write",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "cd .. && lefthook install"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",
@@ -25,6 +26,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.0",
+    "lefthook": "^2.1.8",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",

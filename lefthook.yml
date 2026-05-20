@@ -1,0 +1,50 @@
+# Lefthook config — single hook manager for Python + website (Node).
+# Mirrors CI so a `git push` that would fail the workflow fails locally first.
+#
+# Setup:
+#   - Node devs:   from website/, `npm install` (prepare script wires hooks)
+#   - Python devs: `brew install lefthook` (or `pip install lefthook`)
+#                  then `lefthook install` once
+#
+# Bypass on a single command: append `--no-verify`.
+
+# Fast checks on staged files — keep these snappy so they don't slow commits.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: ruff-format
+      glob: "*.py"
+      run: ruff format --check {staged_files}
+    - name: ruff-lint
+      glob: "*.py"
+      run: ruff check {staged_files}
+    - name: biome-check
+      glob: "website/**/*.{ts,tsx,css,json,html}"
+      root: "website/"
+      run: npx biome check --no-errors-on-unmatched {staged_files}
+
+# Heavier checks before pushing — full type-check, build, and tests.
+pre-push:
+  parallel: false
+  jobs:
+    - name: website-check
+      glob: "website/**/*"
+      root: "website/"
+      run: npm run check
+    - name: website-lint
+      glob: "website/**/*"
+      root: "website/"
+      run: npm run lint
+    - name: website-build
+      glob: "website/**/*"
+      root: "website/"
+      run: npm run build
+    - name: python-lint
+      glob: "**/*.py"
+      run: ruff check .
+    - name: python-typecheck
+      glob: "**/*.py"
+      run: mypy threadit bot.py config.py
+    - name: python-test
+      glob: "**/*.py"
+      run: pytest -q

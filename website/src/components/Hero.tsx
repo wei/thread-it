@@ -212,8 +212,8 @@ export default function Hero() {
 
         <div className="relative min-w-0">
           <p className="sr-only">
-            Animated demonstration: when Bob replies to Alice and Dan replies
-            to Carol in a Discord channel, Thread It creates a thread on each
+            Animated demonstration: when Bob replies to Alice and Dan replies to
+            Carol in a Discord channel, Thread It creates a thread on each
             original message and removes the replies from the main channel.
           </p>
           <HeroDemo />

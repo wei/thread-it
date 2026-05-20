@@ -318,7 +318,10 @@ const REPLY_ENTER_EXIT = {
       "rgba(242,63,67,0)",
     ],
     scaleY: [1, 1, 1, 1, 0],
-    transition: { duration: RED_FLASH_DURATION, times: [0, 0.2, 0.45, 0.75, 1] },
+    transition: {
+      duration: RED_FLASH_DURATION,
+      times: [0, 0.2, 0.45, 0.75, 1],
+    },
   },
 };
 

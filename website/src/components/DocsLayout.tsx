@@ -46,7 +46,7 @@ function useActiveSection(): string {
 
   useEffect(() => {
     const targets = SECTION_IDS.map((id) => document.getElementById(id)).filter(
-      (el): el is HTMLElement => el !== null,
+      (el): el is HTMLElement => el !== null
     );
     if (!targets.length) return;
 
@@ -66,7 +66,7 @@ function useActiveSection(): string {
           setActive(visible[0].target.id);
         }
       },
-      { rootMargin: "-30% 0px -65% 0px", threshold: 0 },
+      { rootMargin: "-30% 0px -65% 0px", threshold: 0 }
     );
 
     for (const t of targets) observer.observe(t);
