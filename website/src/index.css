@@ -1,5 +1,138 @@
 @import "tailwindcss";
 
 @theme {
-  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* Brand / accents */
+  --color-blurple: #5865f2;
+  --color-blurple-hover: #4752c4;
+  --color-blurple-deep: #404eed;
+  --color-fuchsia: #eb459e;
+  --color-green: #3fbb6e;
+  --color-green-dark: #23a559;
+  --color-red: #f23f43;
+
+  /* Surfaces */
+  --color-canvas: #08090d;
+  --color-surface: #1a1c24;
+  --color-surface-soft: #11131a;
+  --color-input: #131520;
+
+  /* Text */
+  --color-ink-1: #f4f5f7;
+  --color-ink-2: #b5bac1;
+  --color-ink-3: #7a8089;
+  --color-link: #00a8fc;
+
+  /* User avatars (Discord channel demo) */
+  --color-user-a: #3ba55d;
+  --color-user-b: #5865f2;
+  --color-user-c: #9b59b6;
+  --color-user-d: #e67e22;
+
+  /* Demo accents */
+  --color-mention-text: #b8c0ff;
+  --color-reply-hook: #4e5058;
+  --color-code-key: #c586c0;
+  --color-code-str: #98c379;
+  --color-code-name: #e5c07b;
+
+  /* Lines */
+  --color-border: #262830;
+
+  /* Fonts */
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
 }
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Anchor scroll offset for in-page jumps from the sidebar */
+:where([id]) {
+  scroll-margin-top: 24px;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-blurple);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Visually-hidden but accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Hero thread weave — stroke-dashoffset is a paint-only property, no layout */
+@keyframes weave {
+  0% {
+    stroke-dashoffset: 380;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -380;
+    opacity: 0;
+  }
+}
+
+.thread-path {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 380 380;
+  animation: weave 8s linear infinite;
+}
+
+/* Accessibility: respect users who request reduced motion.
+ * !important is the documented W3C / WCAG pattern here — third-party libraries
+ * (e.g. Framer Motion) set their own transitions inline and we need to override
+ * them without bumping specificity per-component. */
+/* biome-ignore-start lint/complexity/noImportantStyles: required to override library-injected animation styles */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: required to override library-injected animation styles */

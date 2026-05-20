@@ -1,180 +1,250 @@
-import {
-  Code,
-  Download,
-  ExternalLink,
-  Play,
-  Settings,
-  Shield,
-  Terminal,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
-const setupSteps = [
-  {
-    icon: Download,
-    title: "Clone Repository",
-    description:
-      "Clone the Thread It repository and set up your development environment.",
-    code: "git clone https://github.com/wei/thread-it.git\ncd thread-it",
-    link: null,
-  },
-  {
-    icon: Terminal,
-    title: "Install Dependencies",
-    description:
-      "Set up a virtual environment and install the required Python packages.",
-    code: "python -m venv venv\nsource venv/bin/activate  # On Windows: venv\\Scripts\\activate\npip install -r requirements.txt",
-    link: null,
-  },
-  {
-    icon: Settings,
-    title: "Create Discord Bot",
-    description:
-      "Create a new Discord application and bot in the Discord Developer Portal.",
-    code: null,
-    link: "https://discord.com/developers/applications",
-  },
-  {
-    icon: Shield,
-    title: "Configure Bot Permissions",
-    description:
-      "Enable the Message Content Intent and set up the required permissions.",
-    code: "Required Permissions:\n• View Channels\n• Send Messages\n• Send Messages in Threads\n• Create Public Threads\n• Manage Messages\n• Read Message History\n\nRequired Intents:\n• Message Content Intent (Privileged)",
-    link: null,
-  },
-  {
-    icon: Code,
-    title: "Set Environment Variables",
-    description: "Copy the example environment file and add your bot token.",
-    code: "cp .env.example .env\n# Edit .env with your bot token:\n# DISCORD_TOKEN=your_bot_token_here\n# LOG_LEVEL=INFO",
-    link: null,
-  },
-  {
-    icon: Play,
-    title: "Run the Bot",
-    description: "Start the bot and invite it to your Discord server.",
-    code: "python bot.py",
-    link: "https://discord.com/oauth2/authorize?client_id=1386888801229734018",
-  },
+const INVITE_URL =
+  "https://discord.com/oauth2/authorize?client_id=1386888801229734018";
+
+const BEHAVIOR = [
+  { title: "Ignores bot messages", desc: "Prevents infinite loops" },
+  { title: "Only processes replies", desc: "Regular messages untouched" },
+  { title: "Skips existing threads", desc: "No threads inside threads" },
+  { title: "Validates permissions", desc: "Checks perms before acting" },
+  { title: "Help command", desc: "!thread-it", monoDesc: true },
+  { title: "Helpful notifications", desc: "Auto-delete after 8s" },
 ];
+
+// Matches README's bot permissions table.
+// `bot.py` enforces the first six (`required_permissions`),
+// adds `attach_files` when the reply has attachments,
+// and treats `manage_messages` as optional but recommended.
+const REQUIRED_PERMS = [
+  ["View Channels", "Read messages in channels"],
+  ["Send Messages", "Send messages in main channels"],
+  ["Send Messages in Threads", "Send messages in created threads"],
+  ["Create Public Threads", "Create threads on messages"],
+  ["Read Message History", "Access message history for context"],
+  ["Embed Links", "Post reply content as embeds in threads"],
+  ["Attach Files", "Re-upload reply attachments into threads"],
+] as const;
+
+const RECOMMENDED_PERMS = [
+  ["Manage Messages", "Delete original reply messages after threading"],
+] as const;
 
 export default function Setup() {
   return (
-    <section
-      id="setup"
-      className="py-24 bg-gradient-to-br from-indigo-50 to-purple-50"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-            🚀 Installation
-          </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Get Thread It running in your Discord server with this step-by-step
-            installation guide. Perfect for developers who want to host their
-            own instance.
-          </p>
-        </div>
+    <>
+      {/* Bot Behavior */}
+      <section id="behavior" aria-labelledby="behavior-heading">
+        <h2
+          id="behavior-heading"
+          className="mb-3.5 text-[30px] font-bold tracking-tight"
+        >
+          Bot Behavior
+        </h2>
+        <p className="mb-3 text-ink-2">What Thread It will and won't touch:</p>
 
-        <div className="space-y-6">
-          {setupSteps.map((step) => (
-            <div
-              key={step.title}
-              className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {BEHAVIOR.map((b) => (
+            <article
+              key={b.title}
+              className="flex gap-2.5 rounded-md border border-border bg-surface px-3.5 py-3"
             >
-              <div className="flex items-start gap-6">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center">
-                    <step.icon className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                    {step.title}
-                  </h3>
-
-                  <p className="text-gray-600 leading-relaxed mb-4">
-                    {step.description}
-                  </p>
-
-                  {step.code && (
-                    <div className="bg-gray-900 rounded-lg p-4 text-green-400 font-mono text-sm overflow-x-auto mb-4 whitespace-pre-line">
-                      {step.code}
-                    </div>
+              <span className="font-bold text-green" aria-hidden="true">
+                ✓
+              </span>
+              <div>
+                <h3 className="text-[13.5px] font-semibold text-ink-1">
+                  {b.title}
+                </h3>
+                <p className="text-xs text-ink-3">
+                  {b.monoDesc ? (
+                    <code className="rounded-[3px] border border-border bg-input px-1.5 py-px font-mono text-[12.5px] text-code-name">
+                      {b.desc}
+                    </code>
+                  ) : (
+                    b.desc
                   )}
-
-                  {step.link && (
-                    <a
-                      href={step.link}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
-                    >
-                      {step.title.includes("Discord")
-                        ? "Open Developer Portal"
-                        : "Invite Bot to Server"}
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
+                </p>
               </div>
-            </div>
+            </article>
           ))}
         </div>
+      </section>
 
-        {/* Quick Invite Option */}
-        <div className="mt-16 text-center">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 shadow-lg text-white max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-4">Just Want to Use It?</h3>
-            <p className="mb-6 opacity-90">
-              Skip the installation and use our hosted version. Just invite the
-              bot to your server and start organizing conversations immediately.
-            </p>
+      {/* Self-Host Installation */}
+      <section id="install" aria-labelledby="install-heading">
+        <h2
+          id="install-heading"
+          className="mb-3.5 text-[30px] font-bold tracking-tight"
+        >
+          Self-Host: Installation
+        </h2>
+        <p className="mb-6 max-w-[64ch] text-lg text-pretty text-ink-2">
+          Prefer to run your own instance? Six steps from clone to running bot.
+        </p>
+
+        <Step number={1} title="Clone Repository">
+          <CodeBlock>
+            <Comment># Clone</Comment>
+            {"\ngit clone https://github.com/wei/thread-it.git\ncd thread-it"}
+          </CodeBlock>
+        </Step>
+
+        <Step number={2} title="Install Dependencies">
+          <CodeBlock>
+            {"python -m venv venv\nsource venv/bin/activate  "}
+            <Comment># Windows: venv\\Scripts\\activate</Comment>
+            {"\npip install -r requirements.txt"}
+          </CodeBlock>
+        </Step>
+
+        <Step number={3} title="Create a Discord Bot">
+          <p className="text-ink-2">
+            Create a new Discord application and bot in the{" "}
             <a
-              href="https://discord.com/oauth2/authorize?client_id=1386888801229734018"
+              href="https://discord.com/developers/applications"
               target="_blank"
-              className="inline-flex items-center gap-2 bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
-              rel="noopener"
+              rel="noopener noreferrer"
+              className="text-link hover:underline"
             >
-              Add to Discord (Hosted Version)
-              <ExternalLink className="w-4 h-4" />
+              Discord Developer Portal
             </a>
-          </div>
-        </div>
+            .
+          </p>
+        </Step>
 
-        {/* Support Section */}
-        <div className="mt-16 text-center">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Need Help?
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Check out the comprehensive documentation on GitHub or report
-              issues if you encounter any problems during installation.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="https://github.com/wei/thread-it#readme"
-                target="_blank"
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
-                rel="noopener"
-              >
-                View Documentation
-                <ExternalLink className="w-4 h-4" />
-              </a>
-              <a
-                href="https://github.com/wei/thread-it/issues"
-                target="_blank"
-                className="bg-gray-100 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors duration-300 flex items-center justify-center gap-2"
-                rel="noopener"
-              >
-                Report Issues
-                <ExternalLink className="w-4 h-4" />
-              </a>
+        <Step number={4} title="Configure Bot Permissions">
+          <p className="mb-3 text-ink-2">
+            Grant the required permissions and enable the privileged Message
+            Content Intent.
+          </p>
+          <div className="overflow-hidden rounded-md border border-border">
+            <PermSection label="Required" perms={REQUIRED_PERMS} />
+            <PermSection
+              label="Recommended"
+              note="Optional — without this, threads still get created; original replies just won't be cleaned up."
+              perms={RECOMMENDED_PERMS}
+            />
+            <div className="border-t border-border bg-white/[0.02] px-4 py-3">
+              <h3 className="mb-1 text-[12px] font-bold tracking-wider text-ink-3 uppercase">
+                Gateway Intents
+              </h3>
+              <ul className="text-[13.5px] text-ink-2">
+                <li className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-code-name">
+                    MESSAGE_CONTENT
+                  </span>
+                  <span className="text-xs text-ink-3">(privileged)</span>
+                </li>
+              </ul>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
+        </Step>
+
+        <Step number={5} title="Set Environment Variables">
+          <CodeBlock>
+            {"cp .env.example .env\n"}
+            <Comment># Edit .env</Comment>
+            {"\nDISCORD_TOKEN="}
+            <Str>your_bot_token_here</Str>
+            {"\nLOG_LEVEL="}
+            <Str>INFO</Str>
+          </CodeBlock>
+        </Step>
+
+        <Step number={6} title="Run the Bot">
+          <CodeBlock>python bot.py</CodeBlock>
+        </Step>
+
+        {/* Hosted-version callout — full border + tint, no side stripe */}
+        <aside
+          className="mt-9 rounded-lg border border-green/30 bg-green/[0.08] px-5 py-4"
+          role="note"
+        >
+          <h3 className="mb-1 text-[12.5px] font-bold tracking-wider text-green uppercase">
+            Skip the self-host
+          </h3>
+          <p className="text-sm text-ink-2">
+            The hosted version is free, MIT licensed, and runs the same code.{" "}
+            <a
+              href={INVITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-link hover:underline"
+            >
+              Invite it
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+            </a>
+          </p>
+        </aside>
+      </section>
+    </>
   );
+}
+
+function Step({
+  number,
+  title,
+  children,
+}: {
+  number: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6">
+      <h3 className="mt-7 mb-2 text-[17px] font-semibold text-ink-1">
+        {number} · {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function PermSection({
+  label,
+  perms,
+  note,
+}: {
+  label: string;
+  perms: readonly (readonly [string, string])[];
+  note?: string;
+}) {
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <div className="bg-white/[0.02] px-4 pt-3 pb-1.5">
+        <h3 className="text-[12px] font-bold tracking-wider text-ink-3 uppercase">
+          {label}
+        </h3>
+        {note && <p className="mt-1 text-[12.5px] text-ink-3">{note}</p>}
+      </div>
+      <ul className="divide-y divide-border">
+        {perms.map(([name, purpose]) => (
+          <li
+            key={name}
+            className="flex flex-col gap-0.5 px-4 py-2.5 text-[13.5px] sm:grid sm:grid-cols-[220px_1fr] sm:gap-4"
+          >
+            <span className="font-medium text-ink-1">{name}</span>
+            <span className="text-ink-2">{purpose}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CodeBlock({ children }: { children: React.ReactNode }) {
+  return (
+    <pre className="max-w-full overflow-x-auto rounded-md border border-border bg-input px-4 py-3.5 font-mono text-[13px] leading-[1.65] text-ink-1">
+      {children}
+    </pre>
+  );
+}
+
+function Comment({ children }: { children: React.ReactNode }) {
+  return <span className="text-ink-3">{children}</span>;
+}
+
+function Str({ children }: { children: React.ReactNode }) {
+  return <span className="text-code-str">{children}</span>;
 }
