@@ -1,7 +1,10 @@
 ![Thread It 🧵](https://socialify.git.ci/wei/thread-it/image?custom_language=Discord&description=1&font=Rokkitt&language=1&logo=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fsvgmoji%2Fsvgmoji%2F%2Fpackages%2Fsvgmoji__blob%2Fsvg%2F1F9F5.svg&name=1&owner=1&pattern=Circuit+Board&theme=Light)
 
+[![CI](https://github.com/wei/thread-it/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/wei/thread-it/actions/workflows/ci.yml)
+[![Docker](https://github.com/wei/thread-it/actions/workflows/docker.yml/badge.svg?branch=master)](https://github.com/wei/thread-it/actions/workflows/docker.yml)
 [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Discord.py](https://img.shields.io/badge/discord.py-2.7.1+-blue.svg)](https://github.com/Rapptz/discord.py)
+[![Container](https://img.shields.io/badge/ghcr.io-wei%2Fthread--it-blue?logo=docker)](https://github.com/wei/thread-it/pkgs/container/thread-it)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A Discord bot that automatically keeps channels clean by converting message replies into organized public threads. Thread It promotes organized conversations by seamlessly moving reply discussions into dedicated threads, preventing channel clutter while maintaining context.
@@ -101,7 +104,7 @@ Then use:
 
 ```bash
 ruff check .       # lint
-mypy bot.py config.py  # type-check
+mypy bot.py config.py threadit/  # type-check
 pytest             # run tests
 ```
 
@@ -144,7 +147,9 @@ See the [Deployment Guide](docs/DEPLOYMENT.md) for production docker deployment 
 
 ## 📖 Usage
 
-Once installed and running, Thread It works automatically! You can message `!thread-it help` for more information.
+Once installed and running, Thread It works automatically — just reply to a message and a thread is created. No commands required for the core feature.
+
+For help and a live permission check in the current channel, use the **`/thread-it`** slash command (preferred) or the legacy text command `!thread-it`. Both produce the same output; the slash version replies ephemerally so only you see it.
 
 ### Example Workflow
 
@@ -159,11 +164,11 @@ Main Channel:
 
 ### Supported Content Types
 
-- ✅ Text messages
-- ✅ Images and attachments
-- ✅ Embeds
+- ✅ Text messages (re-posted inside an attribution embed)
+- ✅ Images and attachments (re-uploaded; per-file size cap defaults to 25 MiB)
+- ✅ Original embeds (a new attribution embed is prepended; the original embeds follow)
 - ✅ Message formatting (bold, italic, code blocks, etc.)
-- ✅ Mentions and links (cleaned from thread names)
+- ✅ Mentions and links (cleaned from thread names; `@everyone` / `@here` stripped)
 
 ### Bot Behavior
 

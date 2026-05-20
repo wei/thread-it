@@ -32,7 +32,7 @@ jobs:
         run: ruff check .
 
       - name: Mypy
-        run: mypy bot.py config.py
+        run: mypy bot.py config.py threadit/
 
       - name: Pytest
         run: pytest

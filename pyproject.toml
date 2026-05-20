@@ -26,9 +26,9 @@ Issues = "https://github.com/wei/thread-it/issues"
 [project.scripts]
 thread-it = "bot:main"
 
-# Single-module project; tell setuptools not to scan for packages.
 [tool.setuptools]
 py-modules = ["bot", "config"]
+packages = ["threadit"]
 
 [tool.ruff]
 target-version = "py313"
