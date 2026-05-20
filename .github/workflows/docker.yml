@@ -27,6 +27,7 @@ jobs:
       attestations: write
       id-token: write
       security-events: write
+      pull-requests: write  # for the "Comment PR" step
 
     steps:
       - name: Checkout repository
