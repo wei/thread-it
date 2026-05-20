@@ -814,10 +814,13 @@ class ThreadItBot(discord.Client):
             return
 
         # Rate-limit per channel so a misconfigured server doesn't get spammed
-        # with the same warning on every reply.
+        # with the same warning on every reply. Use None (not 0.0) as the
+        # "never sent" sentinel: time.monotonic() can be small (< cooldown)
+        # on a freshly-booted host, which would otherwise suppress the very
+        # first warning.
         now = time.monotonic()
-        last_sent = self._permission_warning_sent_at.get(channel.id, 0.0)
-        if now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
+        last_sent = self._permission_warning_sent_at.get(channel.id)
+        if last_sent is not None and now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
             self.logger.debug(
                 f"Suppressing duplicate permission warning in #{channel.name} "
                 f"(cooldown {Config.PERMISSION_WARNING_COOLDOWN_SECONDS}s)"
