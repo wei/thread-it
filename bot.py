@@ -87,7 +87,12 @@ async def run() -> None:
             logger.warning(f"Failed to sync application commands: {exc}")
 
     assert Config.DISCORD_TOKEN is not None  # narrowed by Config.validate()
-    await bot.start(Config.DISCORD_TOKEN)
+    # `async with bot:` guarantees bot.close() (HTTP session, websocket,
+    # background tasks) runs on shutdown — including the exception path —
+    # so the event loop tears down cleanly under container restarts and
+    # test runners.
+    async with bot:
+        await bot.start(Config.DISCORD_TOKEN)
 
 
 def main() -> None:

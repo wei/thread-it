@@ -15,9 +15,17 @@ if TYPE_CHECKING:
 # the upstream deployment.
 DEFAULT_CLIENT_ID = "1386888801229734018"
 
+# Both scopes are required: `bot` to join the guild, `applications.commands`
+# so the bot can register slash commands. Without `scope=` Discord rejects
+# the OAuth flow entirely.
+_INVITE_SCOPES = "bot+applications.commands"
+
 
 def invite_url(client_id: str | int) -> str:
-    return f"https://discord.com/oauth2/authorize?client_id={client_id}"
+    return (
+        "https://discord.com/oauth2/authorize"
+        f"?client_id={client_id}&scope={_INVITE_SCOPES}"
+    )
 
 
 @dataclass(frozen=True)
@@ -28,7 +36,7 @@ class ReplyInfo:
     author: discord.Member | discord.User
     attachments: list[discord.Attachment]
     embeds: list[discord.Embed]
-    channel: discord.TextChannel
+    channel: discord.TextChannel | discord.VoiceChannel | discord.StageChannel
     parent_message: discord.Message
     message_id: int
     created_at: datetime

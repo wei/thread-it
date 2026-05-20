@@ -135,11 +135,20 @@ class ThreadItCog(commands.Cog, name="ThreadIt"):
         if message.reference is None:
             return
 
-        # 3. Ignore messages already inside a thread.
+        # 3. Ignore the bot's own prefix command when issued as a reply. The
+        # text form of the hybrid `/thread-it` runs via process_commands; if
+        # we *also* dispatched the orchestrator the user would get help AND
+        # a brand-new thread, which they didn't ask for.
+        if isinstance(self.bot.command_prefix, str) and message.content.lower().startswith(
+            f"{self.bot.command_prefix}thread-it"
+        ):
+            return
+
+        # 4. Ignore messages already inside a thread.
         if isinstance(message.channel, discord.Thread):
             return
 
-        # 4. Guild-only.
+        # 5. Guild-only.
         if message.guild is None:
             return
 

@@ -115,7 +115,7 @@ class PermissionsService:
 
     async def send_permission_error_message(
         self,
-        channel: discord.abc.Messageable,
+        channel: discord.TextChannel | discord.VoiceChannel | discord.StageChannel | discord.Thread,
         missing_required_permissions: list[str],
     ) -> None:
         """
@@ -123,19 +123,18 @@ class PermissionsService:
         rate-limited per channel to avoid spamming a misconfigured server.
         """
         # Avoid attempting a send we know will 403.
-        if not self.check_specific_permission(channel, "send_messages"):  # type: ignore[arg-type]
+        if not self.check_specific_permission(channel, "send_messages"):
             self.logger.error(
-                f"Cannot send permission error message in #{getattr(channel, 'name', '?')} "
+                f"Cannot send permission error message in #{channel.name} "
                 f"- missing Send Messages permission"
             )
             return
 
         now = time.monotonic()
-        channel_id: int = getattr(channel, "id", 0)
-        last_sent = self._warning_sent_at.get(channel_id)
+        last_sent = self._warning_sent_at.get(channel.id)
         if last_sent is not None and now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
             self.logger.debug(
-                f"Suppressing duplicate permission warning in #{getattr(channel, 'name', '?')} "
+                f"Suppressing duplicate permission warning in #{channel.name} "
                 f"(cooldown {Config.PERMISSION_WARNING_COOLDOWN_SECONDS}s)"
             )
             return
@@ -153,20 +152,19 @@ class PermissionsService:
                 f"4. Or re-invite me with the correct permissions: {invite_url(self._get_client_id())}\n\n"
             )
             await channel.send(error_message)
-            self._warning_sent_at[channel_id] = now
-            self.logger.info(f"Sent permission error message to #{getattr(channel, 'name', '?')}")
+            self._warning_sent_at[channel.id] = now
+            self.logger.info(f"Sent permission error message to #{channel.name}")
         except discord.Forbidden:
             self.logger.error(
-                f"Failed to send permission error message in #{getattr(channel, 'name', '?')} - forbidden"
+                f"Failed to send permission error message in #{channel.name} - forbidden"
             )
         except discord.HTTPException as e:
             self.logger.error(
-                f"HTTP error sending permission error message in #{getattr(channel, 'name', '?')}: {e}"
+                f"HTTP error sending permission error message in #{channel.name}: {e}"
             )
         except Exception as e:
             self.logger.exception(
-                f"Unexpected error sending permission error message in "
-                f"#{getattr(channel, 'name', '?')}: {e}"
+                f"Unexpected error sending permission error message in #{channel.name}: {e}"
             )
 
     def log_guild_permissions(self, guild: discord.Guild) -> None:

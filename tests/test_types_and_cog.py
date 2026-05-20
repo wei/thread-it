@@ -8,10 +8,18 @@ from threadit.types import DEFAULT_CLIENT_ID, invite_url
 
 class TestInviteUrl:
     def test_int_id(self):
-        assert invite_url(12345) == "https://discord.com/oauth2/authorize?client_id=12345"
+        url = invite_url(12345)
+        assert url.startswith("https://discord.com/oauth2/authorize?client_id=12345")
 
     def test_str_id(self):
-        assert invite_url("abc") == "https://discord.com/oauth2/authorize?client_id=abc"
+        url = invite_url("abc")
+        assert url.startswith("https://discord.com/oauth2/authorize?client_id=abc")
+
+    def test_includes_both_required_scopes(self):
+        # Without scope= Discord rejects the OAuth flow; without
+        # applications.commands the bot can't register slash commands.
+        url = invite_url(42)
+        assert "scope=bot+applications.commands" in url
 
     def test_default_client_id_constant_matches_upstream(self):
         # If this changes, self-hosters following the README pre-login would

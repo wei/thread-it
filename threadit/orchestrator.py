@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from dataclasses import replace
 
 import discord
 
@@ -73,34 +74,41 @@ class ThreadingOrchestrator:
             if not self._validate_processing_conditions(message):
                 return
 
+            # _validate_processing_conditions confirmed the channel has
+            # `create_thread` and message is in a guild — narrow the type
+            # so the rest of the flow doesn't need a cascade of ignores.
+            assert isinstance(
+                message.channel,
+                discord.TextChannel | discord.VoiceChannel | discord.StageChannel,
+            ), f"unexpected channel type for guild reply: {type(message.channel).__name__}"
+            channel = message.channel
+
             has_attachments = bool(message.attachments)
-            channel_name = getattr(message.channel, "name", "?")
             has_required_perms, missing_required, missing_optional = (
                 self.permissions.validate_permissions(
-                    message.channel,  # type: ignore[arg-type]
-                    has_attachments=has_attachments,
+                    channel, has_attachments=has_attachments
                 )
             )
             if not has_required_perms:
                 self.logger.error(
-                    f"Missing required permissions in #{channel_name}: "
+                    f"Missing required permissions in #{channel.name}: "
                     f"{', '.join(missing_required)}"
                 )
                 await self.permissions.send_permission_error_message(
-                    message.channel, missing_required
+                    channel, missing_required
                 )
                 return
 
             if missing_optional:
                 self.logger.info(
-                    f"Missing optional permissions in #{channel_name}: "
+                    f"Missing optional permissions in #{channel.name}: "
                     f"{', '.join(missing_optional)} "
                     "(bot will continue with reduced functionality)"
                 )
 
-            reply_info = await self.gather_reply_information(message)
+            reply_info = await self.gather_reply_information(message, channel)
             if reply_info is None:
-                await self._log_metrics("gather_reply_info", False, error="Failed to gather info")
+                self._log_metrics("gather_reply_info", False, error="Failed to gather info")
                 return
 
             parent_id = reply_info.parent_message.id
@@ -110,7 +118,7 @@ class ThreadingOrchestrator:
                 # that another coroutine just created.
                 try:
                     parent = await reply_info.channel.fetch_message(parent_id)
-                    reply_info = replace_parent(reply_info, parent)
+                    reply_info = replace(reply_info, parent_message=parent)
                 except discord.NotFound:
                     self.logger.info(
                         f"Parent message {parent_id} deleted before thread creation; skipping"
@@ -148,7 +156,7 @@ class ThreadingOrchestrator:
             await self.cleanup_messages(thread, reply_info)
 
             duration = asyncio.get_event_loop().time() - start_time
-            await self._log_metrics("process_reply_to_thread", True, duration)
+            self._log_metrics("process_reply_to_thread", True, duration)
             self.logger.info(
                 f"Successfully processed reply: created thread '{thread.name}', "
                 f"reposted content, and cleaned up messages for reply from {reply_info.author}"
@@ -156,7 +164,7 @@ class ThreadingOrchestrator:
 
         except Exception as e:
             duration = asyncio.get_event_loop().time() - start_time
-            await self._log_metrics("process_reply_to_thread", False, duration, str(e))
+            self._log_metrics("process_reply_to_thread", False, duration, str(e))
             self.logger.exception(
                 f"Error processing reply to thread for message {message.id} "
                 f"in guild {message.guild.id if message.guild else 'DM'}: {e}"
@@ -180,7 +188,11 @@ class ThreadingOrchestrator:
             return False
         return True
 
-    async def gather_reply_information(self, message: discord.Message) -> ReplyInfo | None:
+    async def gather_reply_information(
+        self,
+        message: discord.Message,
+        channel: discord.TextChannel | discord.VoiceChannel | discord.StageChannel,
+    ) -> ReplyInfo | None:
         """Fetch the parent message and pack everything into a ReplyInfo."""
         try:
             if not (message.reference and message.reference.message_id):
@@ -188,7 +200,7 @@ class ThreadingOrchestrator:
             parent_message_id = message.reference.message_id
 
             try:
-                parent_message = await message.channel.fetch_message(parent_message_id)
+                parent_message = await channel.fetch_message(parent_message_id)
             except discord.NotFound:
                 self.logger.warning(
                     f"Parent message {parent_message_id} not found for reply {message.id}"
@@ -206,7 +218,7 @@ class ThreadingOrchestrator:
                 author=message.author,
                 attachments=list(message.attachments),
                 embeds=list(message.embeds),
-                channel=message.channel,  # type: ignore[arg-type]
+                channel=channel,
                 parent_message=parent_message,
                 message_id=message.id,
                 created_at=message.created_at,
@@ -456,7 +468,7 @@ class ThreadingOrchestrator:
                 f"Unexpected error deleting system thread message {message.id}: {e}"
             )
 
-    async def _log_metrics(
+    def _log_metrics(
         self,
         operation: str,
         success: bool,
@@ -472,7 +484,3 @@ class ThreadingOrchestrator:
             self.logger.warning(f"METRICS: {operation} {status}{duration_str}{error_str}")
 
 
-def replace_parent(info: ReplyInfo, parent: discord.Message) -> ReplyInfo:
-    """Return a copy of `info` with `parent_message` replaced (dataclass is frozen)."""
-    from dataclasses import replace
-    return replace(info, parent_message=parent)
