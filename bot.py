@@ -45,11 +45,18 @@ class ThreadItBot(discord.Client):
 
         # Per-parent-message locks serialize thread creation when multiple
         # replies arrive for the same parent in quick succession.
+        # Value is [lock, waiter_count]; popped when waiter_count drops to 0
+        # to avoid an unbounded dict over the bot's lifetime.
         self._parent_locks = {}
 
         # Per-channel cooldown for in-channel permission warnings, to avoid
         # spamming a misconfigured server on every reply.
         self._permission_warning_sent_at = {}
+
+        # Strong references to fire-and-forget background tasks so the
+        # event loop doesn't GC them mid-await ("Task was destroyed but
+        # it is pending"). Tasks remove themselves on completion.
+        self._background_tasks = set()
 
         # Configure logging
         self.setup_logging()
@@ -244,20 +251,40 @@ class ThreadItBot(discord.Client):
             # Serialize per-parent-message so concurrent replies don't race
             # the "thread exists?" check and end up creating duplicates / dropping replies.
             parent_id = reply_info['parent_message'].id
-            lock = self._parent_locks.setdefault(parent_id, asyncio.Lock())
-            async with lock:
-                # Re-fetch the parent inside the lock so we pick up a thread
-                # that another coroutine just created.
-                try:
-                    parent = await reply_info['channel'].fetch_message(parent_id)
-                    reply_info['parent_message'] = parent
-                except (discord.NotFound, discord.Forbidden):
-                    pass
+            entry = self._parent_locks.setdefault(parent_id, [asyncio.Lock(), 0])
+            entry[1] += 1
+            thread = None
+            try:
+                async with entry[0]:
+                    # Re-fetch the parent inside the lock so we pick up a thread
+                    # that another coroutine just created.
+                    try:
+                        parent = await reply_info['channel'].fetch_message(parent_id)
+                        reply_info['parent_message'] = parent
+                    except discord.NotFound:
+                        self.logger.info(
+                            f"Parent message {parent_id} deleted before thread creation; skipping"
+                        )
+                        return
+                    except (discord.Forbidden, discord.HTTPException) as e:
+                        # Transient or permission issue on re-fetch — proceed with
+                        # the parent we already loaded in gather_reply_information.
+                        self.logger.warning(
+                            f"Re-fetch of parent {parent_id} failed ({e}); using cached copy"
+                        )
 
-                if reply_info['parent_message'].thread is not None:
-                    thread = reply_info['parent_message'].thread
-                else:
-                    thread = await self.create_thread_from_reply(reply_info)
+                    if reply_info['parent_message'].thread is not None:
+                        thread = reply_info['parent_message'].thread
+                    else:
+                        thread = await self.create_thread_from_reply(reply_info)
+            finally:
+                entry[1] -= 1
+                if entry[1] == 0:
+                    # Safe pop: under asyncio's single-threaded loop, a zero
+                    # waiter count means no other coroutine currently holds a
+                    # reference via setdefault, so dropping the entry cannot
+                    # race a peer's lock acquisition.
+                    self._parent_locks.pop(parent_id, None)
 
             if thread is None:
                 self.logger.warning(f"Failed to create thread for reply {reply_info['message_id']}")
@@ -628,7 +655,11 @@ class ThreadItBot(discord.Client):
                 )
                 # Defer the auto-delete so the main flow returns promptly and
                 # we don't hold the process_reply task open for 8 seconds.
-                asyncio.create_task(self._delete_after(notification_message, 8))
+                # Keep a strong reference so the event loop doesn't GC the
+                # task mid-await; remove it when done.
+                task = asyncio.create_task(self._delete_after(notification_message, 8))
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
             else:
                 self.logger.debug(
                     f"Sent notification message {notification_message.id} in #{channel.name} - "
@@ -650,7 +681,7 @@ class ThreadItBot(discord.Client):
             await asyncio.sleep(delay_seconds)
             await message.delete()
             self.logger.debug(
-                f"Auto-deleted notification message {message.id} in #{message.channel.name}"
+                f"Auto-deleted notification message {message.id} in #{getattr(message.channel, 'name', '?')}"
             )
         except discord.NotFound:
             pass

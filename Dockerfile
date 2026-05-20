@@ -25,7 +25,7 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-COPY *.py ./
+COPY *.py .
 
 # Drop root: create an unprivileged user and own /app.
 RUN addgroup -S threadit && adduser -S -G threadit threadit \
