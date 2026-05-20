@@ -6,18 +6,23 @@ A Discord bot that automatically converts message replies into organized public 
 This keeps main channel feeds clean and ensures follow-up discussions are neatly contained.
 """
 
-import os
 import io
 import logging
 import asyncio
+import time
 from typing import Optional
 import discord
-from discord.ext import commands
-from dotenv import load_dotenv
 from config import Config
 
-# Load environment variables
-load_dotenv()
+# Default invite URL client_id used in static error text before login.
+# At runtime we prefer self.user.id so self-hosters get a link pointing at
+# their own bot, not the upstream deployment.
+DEFAULT_CLIENT_ID = "1386888801229734018"
+
+
+def invite_url(client_id) -> str:
+    return f"https://discord.com/oauth2/authorize?client_id={client_id}"
+
 
 class ThreadItBot(discord.Client):
     """
@@ -31,10 +36,27 @@ class ThreadItBot(discord.Client):
         intents.guilds = True          # Required for guild events
         intents.guild_messages = True  # Required for message events
 
-        super().__init__(intents=intents)
+        # Default to no mentions on any bot-authored send. Specific
+        # notifications opt back in to a narrow allow-list.
+        super().__init__(
+            intents=intents,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+        # Per-parent-message locks serialize thread creation when multiple
+        # replies arrive for the same parent in quick succession.
+        self._parent_locks = {}
+
+        # Per-channel cooldown for in-channel permission warnings, to avoid
+        # spamming a misconfigured server on every reply.
+        self._permission_warning_sent_at = {}
 
         # Configure logging
         self.setup_logging()
+
+    def _client_id(self):
+        """Return our bot's client_id once logged in, falling back to default."""
+        return str(self.user.id) if self.user else DEFAULT_CLIENT_ID
 
     def setup_logging(self):
         """Configure logging based on environment variables."""
@@ -111,9 +133,6 @@ class ThreadItBot(discord.Client):
 
         # Handle help command
         if message.content.lower().startswith("!thread-it"):
-            # Check permissions and include setup guidance if needed
-            has_required_perms, missing_required, missing_optional = self.validate_permissions(message.channel)
-
             help_message = (
                 "Hi there! I'm Thread It. My purpose is to keep your Discord channels clean "
                 "by automatically converting message replies into organized public threads.\n\n"
@@ -126,30 +145,35 @@ class ThreadItBot(discord.Client):
                 "**No commands are needed for my core function!** Just reply to a message, and I'll do the rest."
             )
 
-            # Add permission status information
-            if not has_required_perms:
-                permission_list = "\n".join(f"• {perm}" for perm in missing_required)
-                help_message += (
-                    f"\n\n⚠️ **Permission Setup Required**\n"
-                    f"I'm currently missing some required permissions in this channel:\n\n"
-                    f"{permission_list}\n\n"
-                    "**To fix this:**\n"
-                    "1. Go to Server Settings → Roles\n"
-                    "2. Find the 'Thread It' role (or @Thread It)\n"
-                    "3. Enable the missing permissions listed above\n"
-                    "4. Or re-invite me with the correct permissions: https://discord.com/oauth2/authorize?client_id=1386888801229734018"
-                )
-            elif missing_optional:
-                help_message += (
-                    f"\n\n📝 **Optional Enhancement**\n"
-                    f"For the best experience, consider granting the 'Manage Messages' permission. "
-                    f"This allows me to clean up the original reply messages after moving them to threads. "
-                    f"Without this permission, I'll still create threads but won't delete the original replies."
-                )
-            else:
-                help_message += (
-                    f"\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
-                )
+            # In a DM the bot has no per-channel permission state to surface,
+            # so skip the permission block entirely.
+            if message.guild is not None:
+                has_required_perms, missing_required, missing_optional = self.validate_permissions(message.channel)
+
+                # Add permission status information
+                if not has_required_perms:
+                    permission_list = "\n".join(f"• {perm}" for perm in missing_required)
+                    help_message += (
+                        f"\n\n⚠️ **Permission Setup Required**\n"
+                        f"I'm currently missing some required permissions in this channel:\n\n"
+                        f"{permission_list}\n\n"
+                        "**To fix this:**\n"
+                        "1. Go to Server Settings → Roles\n"
+                        "2. Find the 'Thread It' role (or @Thread It)\n"
+                        "3. Enable the missing permissions listed above\n"
+                        f"4. Or re-invite me with the correct permissions: {invite_url(self._client_id())}"
+                    )
+                elif missing_optional:
+                    help_message += (
+                        f"\n\n📝 **Optional Enhancement**\n"
+                        f"For the best experience, consider granting the 'Manage Messages' permission. "
+                        f"This allows me to clean up the original reply messages after moving them to threads. "
+                        f"Without this permission, I'll still create threads but won't delete the original replies."
+                    )
+                else:
+                    help_message += (
+                        f"\n\n✅ **All permissions are correctly set up!** I'm ready to organize your conversations."
+                    )
 
             await message.reply(help_message)
             return
@@ -191,7 +215,10 @@ class ThreadItBot(discord.Client):
                 return
 
             # Check permissions before proceeding
-            has_required_perms, missing_required, missing_optional = self.validate_permissions(message.channel)
+            has_attachments = bool(message.attachments)
+            has_required_perms, missing_required, missing_optional = self.validate_permissions(
+                message.channel, has_attachments=has_attachments
+            )
             if not has_required_perms:
                 self.logger.error(
                     f"Missing required permissions in #{message.channel.name}: {', '.join(missing_required)}"
@@ -214,11 +241,23 @@ class ThreadItBot(discord.Client):
                 await self.log_operation_metrics("gather_reply_info", False, error="Failed to gather info")
                 return
 
-            # Create or retrieve thread and repost content
-            if reply_info['parent_message'].thread is not None:
-                thread = reply_info['parent_message'].thread
-            else:
-                thread = await self.create_thread_from_reply(reply_info)
+            # Serialize per-parent-message so concurrent replies don't race
+            # the "thread exists?" check and end up creating duplicates / dropping replies.
+            parent_id = reply_info['parent_message'].id
+            lock = self._parent_locks.setdefault(parent_id, asyncio.Lock())
+            async with lock:
+                # Re-fetch the parent inside the lock so we pick up a thread
+                # that another coroutine just created.
+                try:
+                    parent = await reply_info['channel'].fetch_message(parent_id)
+                    reply_info['parent_message'] = parent
+                except (discord.NotFound, discord.Forbidden):
+                    pass
+
+                if reply_info['parent_message'].thread is not None:
+                    thread = reply_info['parent_message'].thread
+                else:
+                    thread = await self.create_thread_from_reply(reply_info)
 
             if thread is None:
                 self.logger.warning(f"Failed to create thread for reply {reply_info['message_id']}")
@@ -228,7 +267,13 @@ class ThreadItBot(discord.Client):
             repost_success = await self.repost_reply_in_thread(thread, reply_info)
 
             if not repost_success:
-                self.logger.warning(f"Failed to repost content in thread {thread.id}")
+                # Repost failed (including partial attachment loss). Do NOT
+                # delete the original message; the user's content is still
+                # only safely available in the source channel.
+                self.logger.warning(
+                    f"Repost incomplete for reply {reply_info['message_id']}; "
+                    f"leaving original message intact to avoid data loss"
+                )
                 return
 
             # Clean up messages as specified in design document
@@ -357,6 +402,42 @@ class ThreadItBot(discord.Client):
             )
             return None
 
+    async def _build_attachment_files(self, attachments):
+        """
+        Download attachments and convert them into discord.File objects,
+        enforcing the per-attachment size cap so a malicious or unlucky
+        upload can't OOM a small host.
+
+        Returns:
+            (files, all_succeeded) - all_succeeded is False if any attachment
+            was skipped (oversize) or failed to download.
+        """
+        files = []
+        all_succeeded = True
+        max_bytes = Config.MAX_ATTACHMENT_BYTES
+
+        for attachment in attachments:
+            if attachment.size and attachment.size > max_bytes:
+                self.logger.warning(
+                    f"Skipping oversize attachment {attachment.filename} "
+                    f"({attachment.size} bytes > {max_bytes} byte limit)"
+                )
+                all_succeeded = False
+                continue
+
+            try:
+                file_data = await attachment.read()
+                files.append(discord.File(
+                    fp=io.BytesIO(file_data),
+                    filename=attachment.filename,
+                    description=attachment.description,
+                ))
+            except Exception as e:
+                self.logger.warning(f"Failed to process attachment {attachment.filename}: {e}")
+                all_succeeded = False
+
+        return files, all_succeeded
+
     async def repost_reply_in_thread(self, thread, reply_info):
         """
         Repost the original reply content in the newly created thread.
@@ -388,21 +469,10 @@ class ThreadItBot(discord.Client):
             # Add timestamp
             embed.timestamp = reply_info['created_at']
 
-            # Prepare files for attachments
-            files = []
-            if reply_info['attachments']:
-                for attachment in reply_info['attachments']:
-                    try:
-                        # Download and re-upload the attachment
-                        file_data = await attachment.read()
-                        discord_file = discord.File(
-                            fp=io.BytesIO(file_data),
-                            filename=attachment.filename,
-                            description=attachment.description
-                        )
-                        files.append(discord_file)
-                    except Exception as e:
-                        self.logger.warning(f"Failed to process attachment {attachment.filename}: {e}")
+            # Prepare files for attachments. attachments_ok is False if any
+            # attachment was skipped (oversize) or failed to download; the
+            # caller uses this to avoid deleting the original message.
+            files, attachments_ok = await self._build_attachment_files(reply_info['attachments'])
 
             # Combine the new embed with any existing embeds from the original message
             all_embeds = [embed] + reply_info['embeds']
@@ -428,11 +498,12 @@ class ThreadItBot(discord.Client):
                 f"Reposted reply content in thread {thread.id} with embed attribution: "
                 f"content_length={len(content)}, "
                 f"attachments={len(reply_info['attachments'])}, "
+                f"attachments_reposted={len(files)}, "
                 f"original_embeds={len(reply_info['embeds'])}, "
                 f"total_embeds={len(all_embeds)}"
             )
 
-            return True
+            return attachments_ok
 
         except discord.Forbidden:
             self.logger.error(f"Missing permissions to send message in thread {thread.id}")
@@ -538,8 +609,16 @@ class ThreadItBot(discord.Client):
                     f"Please continue your conversation there!"
                 )
 
+            # Allow mentioning only the addressed user; suppress @everyone /
+            # @here / role mentions in case any sneak through the embed.
+            allowed = discord.AllowedMentions(
+                users=[user], roles=False, everyone=False, replied_user=False
+            )
+
             # Send the notification message
-            notification_message = await channel.send(notification_content)
+            notification_message = await channel.send(
+                notification_content, allowed_mentions=allowed
+            )
 
             # Schedule automatic deletion after 8 seconds (if we have permission)
             if deletion_successful:
@@ -547,9 +626,9 @@ class ThreadItBot(discord.Client):
                     f"Sent temporary notification to {user} in #{channel.name}, "
                     f"message will auto-delete in 8 seconds"
                 )
-                await asyncio.sleep(8)
-                await notification_message.delete()
-                self.logger.debug(f"Auto-deleted notification message {notification_message.id} in #{channel.name}")
+                # Defer the auto-delete so the main flow returns promptly and
+                # we don't hold the process_reply task open for 8 seconds.
+                asyncio.create_task(self._delete_after(notification_message, 8))
             else:
                 self.logger.debug(
                     f"Sent notification message {notification_message.id} in #{channel.name} - "
@@ -564,6 +643,27 @@ class ThreadItBot(discord.Client):
             self.logger.error(f"HTTP error sending notification message: {e}")
         except Exception as e:
             self.logger.exception(f"Unexpected error sending temporary notification: {e}")
+
+    async def _delete_after(self, message, delay_seconds):
+        """Best-effort deletion of a temporary message after a delay."""
+        try:
+            await asyncio.sleep(delay_seconds)
+            await message.delete()
+            self.logger.debug(
+                f"Auto-deleted notification message {message.id} in #{message.channel.name}"
+            )
+        except discord.NotFound:
+            pass
+        except discord.Forbidden:
+            self.logger.warning(
+                f"Lost manage_messages permission before auto-deleting notification {message.id}"
+            )
+        except discord.HTTPException as e:
+            self.logger.warning(f"HTTP error auto-deleting notification {message.id}: {e}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            self.logger.warning(f"Unexpected error auto-deleting notification {message.id}: {e}")
 
     async def delete_system_thread_message(self, message):
         """
@@ -585,7 +685,7 @@ class ThreadItBot(discord.Client):
         except Exception as e:
             self.logger.exception(f"Unexpected error deleting system thread message {message.id}: {e}")
 
-    def validate_permissions(self, channel):
+    def validate_permissions(self, channel, has_attachments: bool = False):
         """
         Validate that the bot has necessary permissions in the channel.
         Separates required permissions (bot fails gracefully if missing) from
@@ -593,11 +693,12 @@ class ThreadItBot(discord.Client):
 
         Args:
             channel: The channel to check permissions for
+            has_attachments: When True, attach_files is also required.
 
         Returns:
             tuple: (has_required_permissions, missing_required_permissions, missing_optional_permissions)
         """
-        if not channel.guild:
+        if not getattr(channel, 'guild', None):
             return False, ["Not a guild channel"], []
 
         bot_member = channel.guild.get_member(self.user.id)
@@ -608,14 +709,20 @@ class ThreadItBot(discord.Client):
         missing_required = []
         missing_optional = []
 
-        # Required permissions - bot cannot function without these
+        # Required permissions - bot cannot function without these.
+        # embed_links is needed because we always post via discord.Embed;
+        # attach_files is added below only when the reply has attachments.
         required_permissions = [
             ('view_channel', 'View Channels'),
             ('send_messages', 'Send Messages'),
             ('send_messages_in_threads', 'Send Messages in Threads'),
             ('create_public_threads', 'Create Public Threads'),
-            ('read_message_history', 'Read Message History')
+            ('read_message_history', 'Read Message History'),
+            ('embed_links', 'Embed Links'),
         ]
+
+        if has_attachments:
+            required_permissions.append(('attach_files', 'Attach Files'))
 
         # Optional permissions - bot can work without these but with reduced functionality
         optional_permissions = [
@@ -643,7 +750,7 @@ class ThreadItBot(discord.Client):
         Returns:
             bool: True if the bot has the permission, False otherwise
         """
-        if not channel.guild:
+        if not getattr(channel, 'guild', None):
             return False
 
         bot_member = channel.guild.get_member(self.user.id)
@@ -668,6 +775,17 @@ class ThreadItBot(discord.Client):
             )
             return
 
+        # Rate-limit per channel so a misconfigured server doesn't get spammed
+        # with the same warning on every reply.
+        now = time.monotonic()
+        last_sent = self._permission_warning_sent_at.get(channel.id, 0.0)
+        if now - last_sent < Config.PERMISSION_WARNING_COOLDOWN_SECONDS:
+            self.logger.debug(
+                f"Suppressing duplicate permission warning in #{channel.name} "
+                f"(cooldown {Config.PERMISSION_WARNING_COOLDOWN_SECONDS}s)"
+            )
+            return
+
         try:
             permission_list = "\n".join(f"• {perm}" for perm in missing_required_permissions)
             error_message = (
@@ -678,10 +796,11 @@ class ThreadItBot(discord.Client):
                 "1. Go to Server Settings → Roles\n"
                 "2. Find the 'Thread It' role (or @Thread It)\n"
                 "3. Enable the missing permissions listed above\n"
-                "4. Or re-invite me with the correct permissions: https://discord.com/oauth2/authorize?client_id=1386888801229734018\n\n"
+                f"4. Or re-invite me with the correct permissions: {invite_url(self._client_id())}\n\n"
             )
 
             await channel.send(error_message)
+            self._permission_warning_sent_at[channel.id] = now
             self.logger.info(f"Sent permission error message to #{channel.name}")
 
         except discord.Forbidden:
@@ -713,6 +832,8 @@ class ThreadItBot(discord.Client):
                 ('view_channel', 'View Channels'),
                 ('send_messages', 'Send Messages'),
                 ('create_public_threads', 'Create Public Threads'),
+                ('embed_links', 'Embed Links'),
+                ('attach_files', 'Attach Files'),
                 ('manage_messages', 'Manage Messages'),
                 ('read_message_history', 'Read Message History')
             ]
