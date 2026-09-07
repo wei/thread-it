@@ -31,11 +31,12 @@ const SIDEBAR_SECTIONS = [
         label: "MIT License",
         external: true,
       },
+      { id: "privacy", href: "#privacy", label: "Privacy Policy" },
     ],
   },
 ];
 
-const SECTION_IDS = ["how-it-works", "features", "behavior", "install"];
+const SECTION_IDS = ["how-it-works", "features", "behavior", "install", "privacy"];
 
 function useActiveSection(): string {
   const [active, setActive] = useState<string>(() => {

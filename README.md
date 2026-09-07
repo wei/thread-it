@@ -19,6 +19,7 @@ A Discord bot that automatically keeps channels clean by converting message repl
 - [Usage](#-usage)
 - [Required Permissions](#-required-permissions)
 - [Support & Documentation](#-support--documentation)
+- [Privacy Policy](#-privacy-policy)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -234,6 +235,13 @@ We welcome contributions to Thread It! Whether you want to fix bugs, add feature
 5. Submit a pull request
 
 For detailed development setup, code style guidelines, testing requirements, and submission process, see our comprehensive [Contributing Guide](docs/CONTRIBUTING.md).
+
+## 🔐 Privacy Policy
+
+Thread It does not store messages or attachments in a database. It temporarily
+processes message data through Discord's API to create threads and repost
+replies, then does not retain the message content or attachment files. Read the
+full [Privacy Policy](docs/PRIVACY.md) for details.
 
 ## 📄 License
 
