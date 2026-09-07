@@ -36,7 +36,13 @@ const SIDEBAR_SECTIONS = [
   },
 ];
 
-const SECTION_IDS = ["how-it-works", "features", "behavior", "install", "privacy"];
+const SECTION_IDS = [
+  "how-it-works",
+  "features",
+  "behavior",
+  "install",
+  "privacy",
+];
 
 function useActiveSection(): string {
   const [active, setActive] = useState<string>(() => {

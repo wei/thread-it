@@ -67,9 +67,9 @@ export default function PrivacyPolicy() {
             Self-hosting and contact
           </h3>
           <p>
-            If you run your own instance, you are responsible for its
-            deployment environment, logs, and any data it retains. Questions
-            can be raised through the{" "}
+            If you run your own instance, you are responsible for its deployment
+            environment, logs, and any data it retains. Questions can be raised
+            through the{" "}
             <a
               href="https://github.com/wei/thread-it/issues"
               target="_blank"
