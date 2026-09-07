@@ -3,6 +3,7 @@ import DocsLayout from "../components/DocsLayout";
 import Features from "../components/Features";
 import Hero from "../components/Hero";
 import HowItWorks from "../components/HowItWorks";
+import PrivacyPolicy from "../components/PrivacyPolicy";
 import Setup from "../components/Setup";
 
 export default function Home() {
@@ -14,6 +15,7 @@ export default function Home() {
           <HowItWorks />
           <Features />
           <Setup />
+          <PrivacyPolicy />
         </div>
         <DocsFooter />
       </DocsLayout>

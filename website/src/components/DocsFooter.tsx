@@ -52,6 +52,9 @@ export default function DocsFooter() {
         >
           README
         </a>
+        <a href="#privacy" className="text-ink-2 hover:text-ink-1">
+          Privacy
+        </a>
       </div>
     </footer>
   );
